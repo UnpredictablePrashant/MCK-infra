@@ -1,5 +1,3 @@
-# MCK-infra
-
 ## VPC Module
 
 A Terraform module to create a VPC with configurable subnets, gateways, route tables, and security groups.
