@@ -9,7 +9,7 @@ This repository contains Terraform modules for deploying production-ready AWS in
 - **VPC Module** (`modules/vpc`) - VPC with public/private subnets, NAT Gateway, Internet Gateway
 - **IAM Module** (`modules/iam`) - IAM roles and policies for EKS cluster and nodes with KMS permissions
 - **KMS Module** (`modules/kms`) - KMS keys for encryption at rest with comprehensive service policies
-- **EKS Module** (`modules/eks`) - Amazon EKS cluster with managed node groups, OIDC, and optional external IAM roles
+- **EKS Module** (`modules/eks`) - Amazon EKS cluster with Auto Mode support, managed node groups, OIDC, and optional external IAM roles
 
 ## Project Structure
 
@@ -414,6 +414,7 @@ module "eks" {
 
 ### EKS Module Security
 
+- ✅ **EKS Auto Mode** for automated node management
 - ✅ API access can be restricted to VPC CIDR
 - ✅ Private endpoint support
 - ✅ OIDC provider for IRSA

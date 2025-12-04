@@ -5,13 +5,15 @@ Terraform module for deploying Amazon EKS cluster with managed node groups, OIDC
 ## Features
 
 - ✅ EKS Control Plane with configurable Kubernetes version
-- ✅ Managed Node Groups with auto-scaling
+- ✅ **EKS Auto Mode** - Automated node provisioning and management (optional)
+- ✅ Managed Node Groups with auto-scaling (when Auto Mode is disabled)
 - ✅ OIDC Provider for IRSA (IAM Roles for Service Accounts)
 - ✅ EBS CSI Driver with IRSA configuration
 - ✅ VPC CNI addon
 - ✅ Configurable security groups
 - ✅ Public and private API endpoint access
 - ✅ Optional KMS encryption support
+- ✅ Support for external IAM roles
 
 ## Usage
 
@@ -99,6 +101,51 @@ module "eks" {
 }
 ```
 
+### With EKS Auto Mode
+
+Enable Auto Mode for automated node provisioning and management:
+
+```hcl
+module "iam" {
+  source = "./modules/iam"
+
+  cluster_name      = "my-eks-cluster"
+  cluster_role_name = "my-eks-cluster-role"
+  node_role_name    = "my-eks-node-role"
+  
+  tags = local.common_tags
+}
+
+module "eks" {
+  source = "./modules/eks"
+
+  depends_on = [module.iam]
+
+  region          = "us-east-1"
+  cluster_name    = "my-eks-cluster"
+  cluster_version = "1.31"  # Auto Mode requires 1.31+
+
+  vpc_id             = module.vpc.vpc_id
+  private_subnet_ids = module.vpc.private_subnet_ids
+
+  # Enable Auto Mode
+  enable_auto_mode = true
+
+  # Use external IAM roles
+  create_iam_roles = false
+  cluster_role_arn = module.iam.eks_cluster_role_arn
+  node_role_arn    = module.iam.eks_node_role_arn
+
+  # Node group settings are ignored when Auto Mode is enabled
+}
+```
+
+**Note**: With Auto Mode enabled:
+- AWS automatically provisions and manages compute resources
+- Node groups are not created (managed by AWS)
+- Requires Kubernetes version 1.31 or higher
+- Uses node pools: `general-purpose` and `system`
+
 ### With External IAM Roles (Recommended)
 
 Use pre-created IAM roles from the IAM module for better security and separation of concerns:
@@ -163,6 +210,7 @@ module "eks" {
 |------|------|---------|-------------|
 | `region` | string | - | AWS region |
 | `cluster_version` | string | `"1.29"` | Kubernetes version |
+| `enable_auto_mode` | bool | `false` | Enable EKS Auto Mode (requires K8s 1.31+) |
 | `kms_key_arn` | string | `""` | Optional KMS key ARN for encryption |
 | `enable_public_access` | bool | `true` | Enable public API access |
 | `enable_private_access` | bool | `true` | Enable private API access |
@@ -192,6 +240,8 @@ module "eks" {
 
 ### Node Group Variables
 
+**Note**: These variables are ignored when `enable_auto_mode = true`
+
 | Name | Type | Default | Description |
 |------|------|---------|-------------|
 | `node_group_min_size` | number | `2` | Minimum nodes |
@@ -213,9 +263,10 @@ module "eks" {
 | `cluster_ca_certificate` | Cluster CA certificate (base64) |
 | `cluster_security_group_id` | Security group ID |
 | `cluster_oidc_issuer` | OIDC issuer URL for IRSA |
-| `node_group_name` | Node group name |
+| `node_group_name` | Node group name (empty if Auto Mode enabled) |
 | `node_group_iam_role_arn` | Node group IAM role ARN |
 | `cluster_iam_role_arn` | Cluster IAM role ARN |
+| `auto_mode_enabled` | Whether EKS Auto Mode is enabled |
 
 ## Security Features
 
@@ -376,11 +427,87 @@ module "eks" {
 }
 ```
 
+## EKS Auto Mode
+
+EKS Auto Mode is an optional feature that automates compute resource provisioning and management for your Kubernetes cluster.
+
+### What is Auto Mode?
+
+Auto Mode simplifies cluster operations by:
+- **Automatic Node Provisioning**: AWS manages compute capacity based on pod requirements
+- **No Node Group Management**: No need to configure instance types, scaling policies, or capacity
+- **Built-in Node Pools**: Uses `general-purpose` and `system` node pools
+- **Automated Networking**: Elastic Load Balancing automatically configured
+- **Automated Storage**: Block storage (EBS) automatically managed
+- **Automated Addons**: AWS manages all cluster addons (VPC CNI, CoreDNS, kube-proxy, EBS CSI)
+- **Automated Updates**: AWS handles node upgrades and patches
+- **Cost Optimization**: Intelligent resource allocation based on workload needs
+
+### When to Use Auto Mode
+
+**Use Auto Mode when:**
+- You want simplified cluster operations
+- You prefer AWS to manage capacity automatically
+- You have dynamic or unpredictable workload patterns
+- You want to minimize operational overhead
+
+**Use Managed Node Groups when:**
+- You need specific instance types or custom AMIs
+- You require SPOT instance configurations
+- You need fine-grained control over node scaling
+- You have specialized hardware requirements (GPU, ARM, etc.)
+
+### Requirements
+
+- Kubernetes version **1.31 or higher**
+- IAM role with appropriate permissions (automatically configured)
+- Private subnets for node placement
+- Access authentication mode: `API_AND_CONFIG_MAP` (automatically set when Auto Mode enabled)
+
+### Configuration
+
+When Auto Mode is enabled, the module automatically configures:
+1. **Compute Config**: Enabled with `general-purpose` and `system` node pools
+2. **Kubernetes Network Config**: Elastic Load Balancing enabled
+3. **Storage Config**: Block storage (EBS) enabled
+
+```hcl
+module "eks" {
+  source = "./modules/eks"
+
+  cluster_version  = "1.31"  # Required: 1.31+
+  enable_auto_mode = true    # Enable Auto Mode
+
+  # IAM roles still required (for control plane and nodes)
+  create_iam_roles = false
+  cluster_role_arn = module.iam.eks_cluster_role_arn
+  node_role_arn    = module.iam.eks_node_role_arn
+
+  # Node group variables are ignored when Auto Mode is enabled
+}
+```
+
+**Auto Mode Configuration Details:**
+- **Compute**: Automatic node provisioning with node pools
+- **Networking**: AWS manages load balancer integration
+- **Storage**: AWS manages EBS CSI driver and volume provisioning
+- **Authentication**: Uses `API_AND_CONFIG_MAP` mode for EKS access (allows both Kubernetes RBAC and IAM)
+- **Addons**: Self-managed addon bootstrap disabled (AWS manages all addons in Auto Mode)
+
 ## EKS Addons
 
+### With Auto Mode Disabled (Default)
 The module automatically installs:
 - **vpc-cni**: For pod networking
 - **aws-ebs-csi-driver**: For EBS volume provisioning
+
+### With Auto Mode Enabled
+All addons are managed automatically by AWS:
+- **vpc-cni**: Managed by AWS
+- **aws-ebs-csi-driver**: Managed by AWS
+- **coredns**: Managed by AWS
+- **kube-proxy**: Managed by AWS
+- No manual addon installation required
 
 ## Cost Estimate (us-east-1)
 

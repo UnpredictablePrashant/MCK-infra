@@ -166,6 +166,44 @@ resource "aws_eks_cluster" "this" {
     security_group_ids      = [local.cluster_security_group_id_effective]
   }
 
+  # Access configuration - Required for Auto Mode
+  access_config {
+    authentication_mode                         = var.enable_auto_mode ? "API_AND_CONFIG_MAP" : "CONFIG_MAP"
+    bootstrap_cluster_creator_admin_permissions = true
+  }
+
+  # Bootstrap configuration - Must be false for Auto Mode
+  bootstrap_self_managed_addons = var.enable_auto_mode ? false : true
+
+  # EKS Auto Mode configuration
+  # Note: All three configs (compute, networking, storage) must be set together
+  dynamic "compute_config" {
+    for_each = var.enable_auto_mode ? [1] : []
+    content {
+      enabled       = true
+      node_pools    = ["general-purpose", "system"]
+      node_role_arn = var.create_iam_roles ? aws_iam_role.node_group[0].arn : var.node_role_arn
+    }
+  }
+
+  dynamic "kubernetes_network_config" {
+    for_each = var.enable_auto_mode ? [1] : []
+    content {
+      elastic_load_balancing {
+        enabled = true
+      }
+    }
+  }
+
+  dynamic "storage_config" {
+    for_each = var.enable_auto_mode ? [1] : []
+    content {
+      block_storage {
+        enabled = true
+      }
+    }
+  }
+
   dynamic "encryption_config" {
     for_each = var.kms_key_arn != "" ? [1] : []
     content {
@@ -187,8 +225,11 @@ resource "aws_eks_cluster" "this" {
 ########################
 # EKS MANAGED NODEGROUP
 ########################
+# Note: Node groups are not created when Auto Mode is enabled
 
 resource "aws_eks_node_group" "default" {
+  count = var.enable_auto_mode ? 0 : 1
+
   cluster_name    = aws_eks_cluster.this.name
   node_group_name = "${var.cluster_name}-default-ng"
   node_role_arn   = var.create_iam_roles ? aws_iam_role.node_group[0].arn : var.node_role_arn
@@ -233,9 +274,11 @@ resource "aws_iam_openid_connect_provider" "cluster" {
 ########################
 # IAM FOR EBS CSI      #
 ########################
+# Note: Not needed when Auto Mode is enabled (AWS manages addons)
 
 resource "aws_iam_role" "ebs_csi" {
-  name = "${var.cluster_name}-ebs-csi-irsa"
+  count = var.enable_auto_mode ? 0 : 1
+  name  = "${var.cluster_name}-ebs-csi-irsa"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -261,15 +304,19 @@ resource "aws_iam_role" "ebs_csi" {
 }
 
 resource "aws_iam_role_policy_attachment" "ebs_csi" {
-  role       = aws_iam_role.ebs_csi.name
+  count      = var.enable_auto_mode ? 0 : 1
+  role       = aws_iam_role.ebs_csi[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
 }
 
 ########################
 # EKS ADDONS           #
 ########################
+# Note: Addons are not manually managed when Auto Mode is enabled
 
 resource "aws_eks_addon" "vpc_cni" {
+  count = var.enable_auto_mode ? 0 : 1
+
   cluster_name = aws_eks_cluster.this.name
   addon_name   = "vpc-cni"
 
@@ -280,9 +327,11 @@ resource "aws_eks_addon" "vpc_cni" {
 }
 
 resource "aws_eks_addon" "ebs_csi" {
+  count = var.enable_auto_mode ? 0 : 1
+
   cluster_name             = aws_eks_cluster.this.name
   addon_name               = "aws-ebs-csi-driver"
-  service_account_role_arn = aws_iam_role.ebs_csi.arn
+  service_account_role_arn = aws_iam_role.ebs_csi[0].arn
 
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
@@ -290,6 +339,6 @@ resource "aws_eks_addon" "ebs_csi" {
   tags = var.tags
 
   depends_on = [
-    aws_iam_role_policy_attachment.ebs_csi
+    aws_iam_role_policy_attachment.ebs_csi[0]
   ]
 }

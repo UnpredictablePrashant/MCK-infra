@@ -14,6 +14,12 @@ variable "cluster_version" {
   default     = "1.29"
 }
 
+variable "enable_auto_mode" {
+  description = "Enable EKS Auto Mode for automated node provisioning and management. When enabled, managed node groups are not created."
+  type        = bool
+  default     = false
+}
+
 variable "vpc_id" {
   description = "ID of the VPC where EKS will run"
   type        = string

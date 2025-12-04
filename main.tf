@@ -100,6 +100,15 @@ module "eks" {
   # KMS Encryption - use KMS key from KMS module
   kms_key_arn = module.kms.kms_key_arn
 
+  # EKS Auto Mode - Automated node provisioning and management
+  # Set to true to enable Auto Mode (requires K8s 1.31+)
+  # When enabled:
+  # - Node group settings below are ignored
+  # - Authentication mode automatically set to API_AND_CONFIG_MAP
+  # - Compute, networking, and storage are fully managed by AWS
+  # WARNING: Enabling Auto Mode on existing cluster requires cluster recreation
+  enable_auto_mode = false
+
   # API access - restrict public access in production
   enable_public_access                 = true
   enable_private_access                = true

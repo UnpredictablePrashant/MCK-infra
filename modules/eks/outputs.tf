@@ -29,8 +29,8 @@ output "cluster_oidc_issuer" {
 }
 
 output "node_group_name" {
-  description = "Default node group name"
-  value       = aws_eks_node_group.default.node_group_name
+  description = "Default node group name (empty if Auto Mode is enabled)"
+  value       = var.enable_auto_mode ? "" : aws_eks_node_group.default[0].node_group_name
 }
 
 output "node_group_iam_role_arn" {
@@ -41,4 +41,9 @@ output "node_group_iam_role_arn" {
 output "cluster_iam_role_arn" {
   description = "IAM role ARN for the cluster"
   value       = var.create_iam_roles ? aws_iam_role.cluster[0].arn : var.cluster_role_arn
+}
+
+output "auto_mode_enabled" {
+  description = "Whether EKS Auto Mode is enabled"
+  value       = var.enable_auto_mode
 }
