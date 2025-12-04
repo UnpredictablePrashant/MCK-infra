@@ -52,3 +52,44 @@ output "security_group_vpc_id" {
   value       = length(aws_security_group.default) > 0 ? aws_security_group.default[0].vpc_id : null
   description = "VPC ID associated with the security group"
 }
+
+output "eks_cluster_role_arn" {
+  description = "ARN of the EKS cluster IAM role"
+  value       = aws_iam_role.eks_cluster_role.arn
+}
+
+output "eks_cluster_role_name" {
+  description = "Name of the EKS cluster IAM role"
+  value       = aws_iam_role.eks_cluster_role.name
+}
+
+output "eks_node_role_arn" {
+  description = "ARN of the EKS node IAM role"
+  value       = aws_iam_role.eks_node_role.arn
+}
+
+output "eks_node_role_name" {
+  description = "Name of the EKS node IAM role"
+  value       = aws_iam_role.eks_node_role.name
+}
+
+output "eks_node_instance_profile" {
+  description = "Name of the EKS node instance profile"
+  value       = aws_iam_instance_profile.eks_node.name
+}
+
+# Output the KMS Key ID and ARN for reference
+output "kms_key_id" {
+  description = "The ID of the KMS key for EKS"
+  value       = aws_kms_key.eks.id
+}
+
+output "kms_key_arn" {
+  description = "The ARN of the KMS key for EKS"
+  value       = aws_kms_key.eks.arn
+}
+
+output "kms_alias" {
+  description = "The alias of the KMS key for EKS"
+  value       = aws_kms_alias.eks.name
+}
