@@ -4,7 +4,8 @@
 
 # EKS Cluster Service Role
 resource "aws_iam_role" "eks_cluster_role" {
-  name               = "eks-cluster-role"
+  name               = var.cluster_role_name
+  path               = var.iam_role_path
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -18,10 +19,13 @@ resource "aws_iam_role" "eks_cluster_role" {
     ]
   })
 
-  tags = {
-    Name        = "eks-cluster-role"
-    Environment = "production"
-  }
+  tags = merge(
+    var.tags,
+    {
+      Name        = var.cluster_role_name
+      Environment = var.environment
+    }
+  )
 }
 
 # Attach AWS managed EKS Cluster Policy
@@ -32,7 +36,8 @@ resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
 
 # KMS permissions for cluster encryption
 resource "aws_iam_policy" "eks_cluster_kms" {
-  name        = "eks-cluster-kms-policy"
+  name        = "${var.cluster_role_name}-kms-policy"
+  path        = var.iam_role_path
   description = "Policy for EKS cluster to use KMS for encryption"
 
   policy = jsonencode({
@@ -59,9 +64,12 @@ resource "aws_iam_policy" "eks_cluster_kms" {
     ]
   })
 
-  tags = {
-    Name = "eks-cluster-kms-policy"
-  }
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.cluster_role_name}-kms-policy"
+    }
+  )
 }
 
 resource "aws_iam_role_policy_attachment" "eks_cluster_kms" {
@@ -71,7 +79,8 @@ resource "aws_iam_role_policy_attachment" "eks_cluster_kms" {
 
 # VPC and EC2 permissions for cluster networking
 resource "aws_iam_policy" "eks_cluster_vpc" {
-  name        = "eks-cluster-vpc-policy"
+  name        = "${var.cluster_role_name}-vpc-policy"
+  path        = var.iam_role_path
   description = "Policy for EKS cluster to manage VPC and networking resources"
 
   policy = jsonencode({
@@ -111,9 +120,12 @@ resource "aws_iam_policy" "eks_cluster_vpc" {
     ]
   })
 
-  tags = {
-    Name = "eks-cluster-vpc-policy"
-  }
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.cluster_role_name}-vpc-policy"
+    }
+  )
 }
 
 resource "aws_iam_role_policy_attachment" "eks_cluster_vpc" {
@@ -127,7 +139,8 @@ resource "aws_iam_role_policy_attachment" "eks_cluster_vpc" {
 
 # EKS Node (Worker) IAM Role
 resource "aws_iam_role" "eks_node_role" {
-  name               = "eks-node-role"
+  name               = var.node_role_name
+  path               = var.iam_role_path
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -141,10 +154,13 @@ resource "aws_iam_role" "eks_node_role" {
     ]
   })
 
-  tags = {
-    Name        = "eks-node-role"
-    Environment = "production"
-  }
+  tags = merge(
+    var.tags,
+    {
+      Name        = var.node_role_name
+      Environment = var.environment
+    }
+  )
 }
 
 # Attach AWS managed Node policies
@@ -165,7 +181,8 @@ resource "aws_iam_role_policy_attachment" "eks_registry_policy" {
 
 # KMS permissions for node encryption
 resource "aws_iam_policy" "eks_node_kms" {
-  name        = "eks-node-kms-policy"
+  name        = "${var.node_role_name}-kms-policy"
+  path        = var.iam_role_path
   description = "Policy for EKS nodes to use KMS for encryption"
 
   policy = jsonencode({
@@ -184,9 +201,12 @@ resource "aws_iam_policy" "eks_node_kms" {
     ]
   })
 
-  tags = {
-    Name = "eks-node-kms-policy"
-  }
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.node_role_name}-kms-policy"
+    }
+  )
 }
 
 resource "aws_iam_role_policy_attachment" "eks_node_kms" {
@@ -196,7 +216,8 @@ resource "aws_iam_role_policy_attachment" "eks_node_kms" {
 
 # VPC and networking permissions for nodes
 resource "aws_iam_policy" "eks_node_vpc" {
-  name        = "eks-node-vpc-policy"
+  name        = "${var.node_role_name}-vpc-policy"
+  path        = var.iam_role_path
   description = "Policy for EKS nodes to manage VPC and networking"
 
   policy = jsonencode({
@@ -234,9 +255,12 @@ resource "aws_iam_policy" "eks_node_vpc" {
     ]
   })
 
-  tags = {
-    Name = "eks-node-vpc-policy"
-  }
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.node_role_name}-vpc-policy"
+    }
+  )
 }
 
 resource "aws_iam_role_policy_attachment" "eks_node_vpc" {
@@ -246,7 +270,7 @@ resource "aws_iam_role_policy_attachment" "eks_node_vpc" {
 
 # Instance Profile for EKS Nodes
 resource "aws_iam_instance_profile" "eks_node" {
-  name = "eks-node-instance-profile"
+  name = var.node_instance_profile_name
   role = aws_iam_role.eks_node_role.name
 }
 
