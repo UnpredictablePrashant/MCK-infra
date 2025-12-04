@@ -4,7 +4,7 @@ data "aws_region" "current" {}
 # IAM Policy Document for KMS Key
 data "aws_iam_policy_document" "eks_kms_policy" {
   statement {
-    sid    = "Enable IAM User Permissions"
+    sid    = "EnableIAMUserPermissions"
     effect = "Allow"
     principals {
       type        = "AWS"
@@ -15,7 +15,7 @@ data "aws_iam_policy_document" "eks_kms_policy" {
   }
 
   statement {
-    sid    = "Allow EKS Service"
+    sid    = "AllowEKSService"
     effect = "Allow"
     principals {
       type        = "Service"
@@ -31,7 +31,7 @@ data "aws_iam_policy_document" "eks_kms_policy" {
   }
 
   statement {
-    sid    = "Allow EC2 Service"
+    sid    = "AllowEC2Service"
     effect = "Allow"
     principals {
       type        = "Service"
@@ -47,7 +47,7 @@ data "aws_iam_policy_document" "eks_kms_policy" {
   }
 
   statement {
-    sid    = "Allow EKS Cluster to use KMS"
+    sid    = "AllowEKSClusterToUseKMS"
     effect = "Allow"
     principals {
       type        = "AWS"
@@ -63,7 +63,7 @@ data "aws_iam_policy_document" "eks_kms_policy" {
   }
 
   statement {
-    sid    = "Allow EKS Nodes to use KMS"
+    sid    = "AllowEKSNodesToUseKMS"
     effect = "Allow"
     principals {
       type        = "AWS"

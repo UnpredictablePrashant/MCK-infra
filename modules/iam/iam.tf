@@ -44,7 +44,7 @@ resource "aws_iam_policy" "eks_cluster_kms" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "Allow EKS to use KMS for encryption"
+        Sid    = "AllowEKSToUseKMSForEncryption"
         Effect = "Allow"
         Action = [
           "kms:Decrypt",
@@ -56,7 +56,7 @@ resource "aws_iam_policy" "eks_cluster_kms" {
         Condition = {
           StringEquals = {
             "kms:ViaService" = [
-              "eks.${data.aws_region.current.name}.amazonaws.com"
+              "eks.${data.aws_region.current.id}.amazonaws.com"
             ]
           }
         }
@@ -87,7 +87,7 @@ resource "aws_iam_policy" "eks_cluster_vpc" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "EKS VPC Resource Management"
+        Sid    = "EKSVPCResourceManagement"
         Effect = "Allow"
         Action = [
           "ec2:CreateSecurityGroup",
@@ -107,7 +107,7 @@ resource "aws_iam_policy" "eks_cluster_vpc" {
         Resource = "*"
       },
       {
-        Sid    = "EKS Elastic Network Interface Management"
+        Sid    = "EKSElasticNetworkInterfaceManagement"
         Effect = "Allow"
         Action = [
           "ec2:CreateNetworkInterface",
@@ -189,7 +189,7 @@ resource "aws_iam_policy" "eks_node_kms" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "Allow EKS nodes to decrypt with KMS"
+        Sid    = "AllowEKSNodesToDecryptWithKMS"
         Effect = "Allow"
         Action = [
           "kms:Decrypt",
@@ -224,7 +224,7 @@ resource "aws_iam_policy" "eks_node_vpc" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "EKS Node VPC and EC2 Permissions"
+        Sid    = "EKSNodeVPCAndEC2Permissions"
         Effect = "Allow"
         Action = [
           "ec2:DescribeSecurityGroups",
@@ -239,7 +239,7 @@ resource "aws_iam_policy" "eks_node_vpc" {
         Resource = "*"
       },
       {
-        Sid    = "EKS Node Auto Scaling"
+        Sid    = "EKSNodeAutoScaling"
         Effect = "Allow"
         Action = [
           "autoscaling:DescribeAutoScalingGroups",
