@@ -30,6 +30,44 @@ variable "kms_key_arn" {
   default     = ""
 }
 
+########################
+# IAM ROLE VARS        #
+########################
+
+variable "create_iam_roles" {
+  description = "Whether to create IAM roles for cluster and nodes. Set to false when using external IAM roles."
+  type        = bool
+  default     = true
+}
+
+variable "cluster_role_arn" {
+  description = "ARN of existing IAM role for the EKS cluster. Required when create_iam_roles is false."
+  type        = string
+  default     = ""
+
+  validation {
+    condition = (
+      var.cluster_role_arn == "" 
+      || can(regex("^arn:aws[a-z-]*:iam::[0-9]{12}:role/.+", var.cluster_role_arn))
+    )
+    error_message = "The cluster_role_arn must be a valid IAM role ARN (e.g., arn:aws:iam::123456789012:role/role-name) or empty string."
+  }
+}
+
+variable "node_role_arn" {
+  description = "ARN of existing IAM role for the EKS nodes. Required when create_iam_roles is false."
+  type        = string
+  default     = ""
+
+  validation {
+    condition = (
+      var.node_role_arn == "" 
+      || can(regex("^arn:aws[a-z-]*:iam::[0-9]{12}:role/.+", var.node_role_arn))
+    )
+    error_message = "The node_role_arn must be a valid IAM role ARN (e.g., arn:aws:iam::123456789012:role/role-name) or empty string."
+  }
+}
+
 variable "enable_public_access" {
   description = "Whether the EKS API is accessible publicly"
   type        = bool

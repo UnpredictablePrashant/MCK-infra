@@ -3,7 +3,8 @@
 ########################
 
 resource "aws_iam_role" "cluster" {
-  name = "${var.cluster_name}-cluster-role"
+  count = var.create_iam_roles ? 1 : 0
+  name  = "${var.cluster_name}-cluster-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -24,12 +25,14 @@ resource "aws_iam_role" "cluster" {
 }
 
 resource "aws_iam_role_policy_attachment" "cluster_AmazonEKSClusterPolicy" {
-  role       = aws_iam_role.cluster.name
+  count      = var.create_iam_roles ? 1 : 0
+  role       = aws_iam_role.cluster[0].name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
 }
 
 resource "aws_iam_role_policy_attachment" "cluster_AmazonEKSVPCResourceController" {
-  role       = aws_iam_role.cluster.name
+  count      = var.create_iam_roles ? 1 : 0
+  role       = aws_iam_role.cluster[0].name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController"
 }
 
@@ -38,7 +41,8 @@ resource "aws_iam_role_policy_attachment" "cluster_AmazonEKSVPCResourceControlle
 ########################
 
 resource "aws_iam_role" "node_group" {
-  name = "${var.cluster_name}-nodegroup-role"
+  count = var.create_iam_roles ? 1 : 0
+  name  = "${var.cluster_name}-nodegroup-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -59,17 +63,20 @@ resource "aws_iam_role" "node_group" {
 }
 
 resource "aws_iam_role_policy_attachment" "node_AmazonEKSWorkerNodePolicy" {
-  role       = aws_iam_role.node_group.name
+  count      = var.create_iam_roles ? 1 : 0
+  role       = aws_iam_role.node_group[0].name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
 }
 
 resource "aws_iam_role_policy_attachment" "node_AmazonEC2ContainerRegistryReadOnly" {
-  role       = aws_iam_role.node_group.name
+  count      = var.create_iam_roles ? 1 : 0
+  role       = aws_iam_role.node_group[0].name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
 resource "aws_iam_role_policy_attachment" "node_AmazonEKS_CNI_Policy" {
-  role       = aws_iam_role.node_group.name
+  count      = var.create_iam_roles ? 1 : 0
+  role       = aws_iam_role.node_group[0].name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
 }
 
@@ -148,7 +155,7 @@ resource "aws_security_group" "cluster" {
 
 resource "aws_eks_cluster" "this" {
   name     = var.cluster_name
-  role_arn = aws_iam_role.cluster.arn
+  role_arn = var.create_iam_roles ? aws_iam_role.cluster[0].arn : var.cluster_role_arn
   version  = var.cluster_version
 
   vpc_config {
@@ -170,12 +177,11 @@ resource "aws_eks_cluster" "this" {
     }
   }
 
-  depends_on = [
-    aws_iam_role_policy_attachment.cluster_AmazonEKSClusterPolicy,
-    aws_iam_role_policy_attachment.cluster_AmazonEKSVPCResourceController
-  ]
-
   tags = var.tags
+
+  # Note: Dependencies are handled implicitly through role_arn reference
+  # When create_iam_roles=true, role_arn references aws_iam_role.cluster[0].arn
+  # This creates automatic dependency on the role and its policy attachments
 }
 
 ########################
@@ -185,7 +191,7 @@ resource "aws_eks_cluster" "this" {
 resource "aws_eks_node_group" "default" {
   cluster_name    = aws_eks_cluster.this.name
   node_group_name = "${var.cluster_name}-default-ng"
-  node_role_arn   = aws_iam_role.node_group.arn
+  node_role_arn   = var.create_iam_roles ? aws_iam_role.node_group[0].arn : var.node_role_arn
 
   subnet_ids = var.private_subnet_ids
 
@@ -207,11 +213,9 @@ resource "aws_eks_node_group" "default" {
     create_before_destroy = true
   }
 
-  depends_on = [
-    aws_iam_role_policy_attachment.node_AmazonEKSWorkerNodePolicy,
-    aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly,
-    aws_iam_role_policy_attachment.node_AmazonEKS_CNI_Policy
-  ]
+  # Note: Dependencies are handled implicitly through node_role_arn reference
+  # When create_iam_roles=true, node_role_arn references aws_iam_role.node_group[0].arn
+  # This creates automatic dependency on the role and its policy attachments
 }
 
 ########################

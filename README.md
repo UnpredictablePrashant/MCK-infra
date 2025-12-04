@@ -7,14 +7,18 @@ Infrastructure as Code for AWS using Terraform modules.
 This repository contains Terraform modules for deploying production-ready AWS infrastructure:
 
 - **VPC Module** (`modules/vpc`) - VPC with public/private subnets, NAT Gateway, Internet Gateway
-- **EKS Module** (`modules/eks`) - Amazon EKS cluster with managed node groups and OIDC
-- **KMS Module** (coming soon) - KMS keys for encryption at rest
+- **IAM Module** (`modules/iam`) - IAM roles and policies for EKS cluster and nodes with KMS permissions
+- **KMS Module** (`modules/kms`) - KMS keys for encryption at rest with comprehensive service policies
+- **EKS Module** (`modules/eks`) - Amazon EKS cluster with managed node groups, OIDC, and optional external IAM roles
 
 ## Project Structure
 
 ```
 MCK-infra/
-├── main.tf              # Root module - calls VPC and EKS modules
+├── main.tf              # Module orchestration (locals + module calls)
+├── provider.tf          # AWS provider configuration
+├── versions.tf          # Terraform and provider version requirements
+├── outputs.tf           # All infrastructure outputs
 ├── README.md            # This file
 ├── modules/
 │   ├── vpc/
@@ -22,6 +26,16 @@ MCK-infra/
 │   │   ├── variables.tf
 │   │   ├── outputs.tf
 │   │   └── README.md    # VPC module documentation
+│   ├── iam/
+│   │   ├── iam.tf
+│   │   ├── variables.tf
+│   │   ├── outputs.tf
+│   │   └── README.md    # IAM module documentation
+│   ├── kms/
+│   │   ├── kms.tf
+│   │   ├── variables.tf
+│   │   ├── outputs.tf
+│   │   └── README.md    # KMS module documentation
 │   └── eks/
 │       ├── main.tf
 │       ├── variables.tf
@@ -114,17 +128,79 @@ module "eks" {
 
 **See [`modules/eks/README.md`](modules/eks/README.md) for detailed documentation.**
 
-### 3. Complete Example
+### 3. IAM Module
 
-Here's how to use both modules together:
+Create IAM roles with enhanced permissions for EKS:
+
+```hcl
+module "iam" {
+  source = "./modules/iam"
+
+  project_name               = "my-project"
+  environment                = "production"
+  cluster_name               = "my-eks-cluster"
+  cluster_role_name          = "my-eks-cluster-role"
+  node_role_name             = "my-eks-node-role"
+  node_instance_profile_name = "my-eks-node-profile"
+
+  tags = {
+    Environment = "production"
+  }
+}
+```
+
+**See [`modules/iam/README.md`](modules/iam/README.md) for detailed documentation.**
+
+### 4. KMS Module
+
+Create KMS key for encryption at rest:
+
+```hcl
+module "kms" {
+  source = "./modules/kms"
+
+  project_name             = "my-project"
+  environment              = "production"
+  kms_alias_name           = "my-eks-encryption"
+  kms_deletion_window_days = 30
+  kms_enable_key_rotation  = true
+
+  tags = {
+    Environment = "production"
+  }
+}
+```
+
+**See [`modules/kms/README.md`](modules/kms/README.md) for detailed documentation.**
+
+### 5. Complete Example (All Modules)
+
+Here's how to use all modules together with best practices:
 
 ```hcl
 # Provider configuration
 provider "aws" {
   region = "us-east-1"
+  
+  default_tags {
+    tags = {
+      Project     = "MyProject"
+      Environment = "production"
+      ManagedBy   = "Terraform"
+    }
+  }
 }
 
-# VPC Module
+# Local values
+locals {
+  cluster_name = "prod-eks"
+  common_tags = {
+    Project     = "MyProject"
+    Environment = "production"
+  }
+}
+
+# 1. VPC Module
 module "vpc" {
   source = "./modules/vpc"
 
@@ -136,22 +212,66 @@ module "vpc" {
   private_subnets = ["10.0.10.0/24", "10.0.11.0/24"]
 
   enable_nat_gateway = true
+  tags               = local.common_tags
 }
 
-# EKS Module
+# 2. KMS Module (for encryption)
+module "kms" {
+  source = "./modules/kms"
+
+  project_name             = "myproject"
+  environment              = "production"
+  kms_alias_name           = "prod-eks-encryption"
+  kms_deletion_window_days = 30
+  kms_enable_key_rotation  = true
+
+  tags = local.common_tags
+}
+
+# 3. IAM Module (roles for EKS)
+module "iam" {
+  source = "./modules/iam"
+
+  depends_on = [module.kms]
+
+  project_name      = "myproject"
+  environment       = "production"
+  cluster_name      = local.cluster_name
+  cluster_role_name = "${local.cluster_name}-cluster-role"
+  node_role_name    = "${local.cluster_name}-node-role"
+
+  tags = local.common_tags
+}
+
+# 4. EKS Module (using all above modules)
 module "eks" {
   source = "./modules/eks"
 
+  depends_on = [module.vpc, module.iam, module.kms]
+
   region          = "us-east-1"
-  cluster_name    = "prod-eks"
+  cluster_name    = local.cluster_name
   cluster_version = "1.29"
 
+  # Network from VPC module
   vpc_id             = module.vpc.vpc_id
   private_subnet_ids = module.vpc.private_subnet_ids
 
-  node_group_min_size     = 2
-  node_group_desired_size = 3
-  node_group_max_size     = 5
+  # IAM from IAM module
+  create_iam_roles = false
+  cluster_role_arn = module.iam.eks_cluster_role_arn
+  node_role_arn    = module.iam.eks_node_role_arn
+
+  # Encryption from KMS module
+  kms_key_arn = module.kms.kms_key_arn
+
+  # Node configuration
+  node_group_min_size       = 2
+  node_group_desired_size   = 3
+  node_group_max_size       = 5
+  node_group_instance_types = ["t3.medium"]
+
+  tags = local.common_tags
 }
 
 # Outputs
@@ -161,6 +281,14 @@ output "vpc_id" {
 
 output "eks_cluster_endpoint" {
   value = module.eks.cluster_endpoint
+}
+
+output "kms_key_arn" {
+  value = module.kms.kms_key_arn
+}
+
+output "configure_kubectl" {
+  value = "aws eks update-kubeconfig --region us-east-1 --name ${module.eks.cluster_name}"
 }
 ```
 
@@ -186,6 +314,30 @@ module.eks.cluster_name
 module.eks.cluster_endpoint
 module.eks.cluster_ca_certificate
 module.eks.cluster_oidc_issuer
+module.eks.cluster_iam_role_arn
+module.eks.node_group_iam_role_arn
+```
+
+### IAM Module Outputs
+
+Access IAM module outputs using:
+
+```hcl
+module.iam.eks_cluster_role_arn
+module.iam.eks_cluster_role_name
+module.iam.eks_node_role_arn
+module.iam.eks_node_role_name
+module.iam.eks_node_instance_profile
+```
+
+### KMS Module Outputs
+
+Access KMS module outputs using:
+
+```hcl
+module.kms.kms_key_id
+module.kms.kms_key_arn
+module.kms.kms_alias
 ```
 
 ## Configuration
@@ -205,22 +357,36 @@ The root `main.tf` file contains hardcoded values for testing. To customize:
 | Node Type | `main.tf` | `t3.medium` | EC2 instance type |
 | Node Count | `main.tf` | 2-4 | Min/Max nodes |
 
-## KMS Encryption (Optional)
+## KMS Encryption
 
-The EKS module supports optional KMS encryption for secrets at rest. Pass a KMS key ARN from a separate KMS module:
+The infrastructure now includes a dedicated KMS module for encryption at rest:
 
 ```hcl
+module "kms" {
+  source = "./modules/kms"
+  
+  kms_alias_name           = "prod-eks-encryption"
+  kms_enable_key_rotation  = true
+  kms_deletion_window_days = 30
+  
+  tags = local.common_tags
+}
+
 module "eks" {
   source = "./modules/eks"
   
   # ... other config ...
   
-  # Pass KMS key from KMS module
-  kms_key_arn = module.kms.eks_kms_key_arn
+  # Use KMS key from KMS module
+  kms_key_arn = module.kms.kms_key_arn
 }
 ```
 
-**Note**: KMS module will be added in the future.
+**Benefits**:
+- Automatic key rotation
+- Encryption of Kubernetes secrets in etcd
+- Encryption of EBS volumes
+- Compliance with security standards (HIPAA, PCI DSS, SOC 2)
 
 ## Security Features
 
@@ -230,35 +396,64 @@ module "eks" {
 - ✅ Restricted egress by default (HTTPS, HTTP, DNS only)
 - ✅ Customizable security group rules
 
+### IAM Module Security
+
+- ✅ Least privilege IAM policies
+- ✅ KMS encryption permissions
+- ✅ Service-specific assume role policies
+- ✅ Auto-scaling permissions for cluster autoscaler
+- ✅ VPC networking permissions
+
+### KMS Module Security
+
+- ✅ Automatic key rotation enabled
+- ✅ Service-specific key policies (EKS, EC2)
+- ✅ Configurable deletion window
+- ✅ CloudTrail integration for audit logs
+- ✅ FIPS 140-2 Level 2 compliance
+
 ### EKS Module Security
 
 - ✅ API access can be restricted to VPC CIDR
 - ✅ Private endpoint support
 - ✅ OIDC provider for IRSA
 - ✅ Security group validations
-- ✅ Optional KMS encryption support
+- ✅ KMS encryption for secrets at rest
+- ✅ Support for external IAM roles
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                 VPC (10.0.0.0/16)                   │
-├──────────────────────┬──────────────────────────────┤
-│   Public Subnets     │      Private Subnets         │
-│   - 10.0.0.0/24      │      - 10.0.10.0/24          │
-│   - 10.0.1.0/24      │      - 10.0.11.0/24          │
-│                      │                              │
-│   [Internet Gateway] │      [NAT Gateway]           │
-│                      │                              │
-│                      │   ┌────────────────────┐     │
-│                      │   │  EKS Control Plane │     │
-│                      │   └────────────────────┘     │
-│                      │                              │
-│                      │   ┌────────────────────┐     │
-│                      │   │  EKS Worker Nodes  │     │
-│                      │   │  (Managed Node Grp)│     │
-│                      │   └────────────────────┘     │
-└──────────────────────┴──────────────────────────────┘
+                    ┌──────────────────┐
+                    │   KMS Module     │
+                    │  (Encryption)    │
+                    └────────┬─────────┘
+                             │
+                    ┌────────▼─────────┐
+                    │   IAM Module     │
+                    │  (Roles/Policies)│
+                    └────────┬─────────┘
+                             │
+┌────────────────────────────▼─────────────────────────┐
+│                 VPC (10.0.0.0/16)                    │
+├──────────────────────┬───────────────────────────────┤
+│   Public Subnets     │      Private Subnets          │
+│   - 10.0.0.0/24      │      - 10.0.10.0/24           │
+│   - 10.0.1.0/24      │      - 10.0.11.0/24           │
+│                      │                               │
+│   [Internet Gateway] │      [NAT Gateway]            │
+│                      │                               │
+│                      │   ┌─────────────────────┐     │
+│                      │   │  EKS Control Plane  │     │
+│                      │   │  (with IAM + KMS)   │     │
+│                      │   └─────────────────────┘     │
+│                      │                               │
+│                      │   ┌─────────────────────┐     │
+│                      │   │  EKS Worker Nodes   │     │
+│                      │   │  (Managed Node Grp) │     │
+│                      │   │  (with IAM + KMS)   │     │
+│                      │   └─────────────────────┘     │
+└──────────────────────┴───────────────────────────────┘
 ```
 
 ## Cost Estimate (us-east-1)
@@ -267,12 +462,20 @@ module "eks" {
 |----------|--------------|----------------------|
 | VPC | Standard | Free |
 | NAT Gateway | 1 instance | ~$32 |
+| KMS Key | 1 key | ~$1 |
+| IAM Roles | All roles | Free |
 | EKS Control Plane | 1 cluster | $73 |
 | EC2 (t3.medium) | 2 nodes | ~$60 |
 | EBS Volumes | 40GB (2x20GB) | ~$4 |
-| **Total** | | **~$169/month** |
+| **Total** | | **~$170/month** |
 
-*Costs exclude data transfer and may vary by region*
+*Costs exclude data transfer, KMS API requests, and may vary by region*
+
+### Cost Optimization Tips
+
+- **Development**: Use SPOT instances, disable KMS rotation
+- **Production**: Use ON_DEMAND, enable KMS rotation
+- **Multi-AZ**: Cost scales with number of NAT Gateways
 
 ## Post-Deployment
 
@@ -323,6 +526,8 @@ terraform destroy
 ## Module Documentation
 
 - **VPC Module**: See [`modules/vpc/README.md`](modules/vpc/README.md)
+- **IAM Module**: See [`modules/iam/README.md`](modules/iam/README.md)
+- **KMS Module**: See [`modules/kms/README.md`](modules/kms/README.md)
 - **EKS Module**: See [`modules/eks/README.md`](modules/eks/README.md)
 
 ## Requirements

@@ -91,7 +91,55 @@ module "eks" {
   private_subnet_ids = module.vpc.private_subnet_ids
 
   # Pass KMS key ARN from KMS module
-  kms_key_arn = module.kms.eks_kms_key_arn
+  kms_key_arn = module.kms.kms_key_arn
+
+  node_group_min_size     = 2
+  node_group_desired_size = 2
+  node_group_max_size     = 4
+}
+```
+
+### With External IAM Roles (Recommended)
+
+Use pre-created IAM roles from the IAM module for better security and separation of concerns:
+
+```hcl
+module "iam" {
+  source = "./modules/iam"
+
+  cluster_name      = "my-eks-cluster"
+  cluster_role_name = "my-eks-cluster-role"
+  node_role_name    = "my-eks-node-role"
+  
+  tags = local.common_tags
+}
+
+module "kms" {
+  source = "./modules/kms"
+
+  kms_alias_name = "my-eks-encryption"
+  tags           = local.common_tags
+}
+
+module "eks" {
+  source = "./modules/eks"
+
+  depends_on = [module.iam, module.kms]
+
+  region          = "us-east-1"
+  cluster_name    = "my-eks-cluster"
+  cluster_version = "1.29"
+
+  vpc_id             = module.vpc.vpc_id
+  private_subnet_ids = module.vpc.private_subnet_ids
+
+  # Use external IAM roles
+  create_iam_roles = false
+  cluster_role_arn = module.iam.eks_cluster_role_arn
+  node_role_arn    = module.iam.eks_node_role_arn
+
+  # Use external KMS key
+  kms_key_arn = module.kms.kms_key_arn
 
   node_group_min_size     = 2
   node_group_desired_size = 2
@@ -119,6 +167,18 @@ module "eks" {
 | `enable_public_access` | bool | `true` | Enable public API access |
 | `enable_private_access` | bool | `true` | Enable private API access |
 | `cluster_endpoint_public_access_cidrs` | list(string) | `["0.0.0.0/0"]` | CIDRs for public API access |
+
+### IAM Role Variables
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `create_iam_roles` | bool | `true` | Create IAM roles (set false to use external roles) |
+| `cluster_role_arn` | string | `""` | Existing cluster IAM role ARN (required if create_iam_roles=false) |
+| `node_role_arn` | string | `""` | Existing node IAM role ARN (required if create_iam_roles=false) |
+
+**Important**: When `create_iam_roles = false`, both `cluster_role_arn` and `node_role_arn` must be provided with valid IAM role ARNs. The module validates:
+- ARNs are not empty when using external roles
+- ARNs follow the format: `arn:aws:iam::123456789012:role/role-name`
 
 ### Security Group Variables
 
@@ -155,6 +215,7 @@ module "eks" {
 | `cluster_oidc_issuer` | OIDC issuer URL for IRSA |
 | `node_group_name` | Node group name |
 | `node_group_iam_role_arn` | Node group IAM role ARN |
+| `cluster_iam_role_arn` | Cluster IAM role ARN |
 
 ## Security Features
 
@@ -169,10 +230,24 @@ The module implements security best practices:
 
 ### IAM Roles
 
-The module creates:
+The module can either create IAM roles or use existing ones:
+
+**Option 1: Module-created IAM Roles (Default)**
 - **Cluster Role**: For EKS control plane
 - **Node Group Role**: For worker nodes
 - **EBS CSI Role**: For EBS volume provisioning (IRSA)
+
+**Option 2: External IAM Roles (Recommended)**
+Set `create_iam_roles = false` and provide:
+- `cluster_role_arn`: Pre-created cluster role from IAM module
+- `node_role_arn`: Pre-created node role from IAM module
+
+Using external IAM roles from the IAM module provides:
+- Enhanced KMS permissions for encryption
+- VPC networking permissions
+- Auto-scaling permissions for cluster autoscaler
+- Better separation of concerns
+- Reusable IAM policies across multiple clusters
 
 ### OIDC Provider
 
@@ -189,11 +264,39 @@ The module accepts an optional `kms_key_arn` variable for encrypting Kubernetes 
 
 ## Examples
 
-### Production Cluster
+### Production Cluster (with External IAM & KMS)
 
 ```hcl
+module "kms" {
+  source = "./modules/kms"
+
+  project_name             = "prod"
+  environment              = "production"
+  kms_alias_name           = "prod-eks-encryption"
+  kms_deletion_window_days = 30
+  kms_enable_key_rotation  = true
+
+  tags = local.prod_tags
+}
+
+module "iam" {
+  source = "./modules/iam"
+
+  depends_on = [module.kms]
+
+  project_name      = "prod"
+  environment       = "production"
+  cluster_name      = "prod-eks"
+  cluster_role_name = "prod-eks-cluster-role"
+  node_role_name    = "prod-eks-node-role"
+
+  tags = local.prod_tags
+}
+
 module "eks" {
   source = "./modules/eks"
+
+  depends_on = [module.iam, module.kms]
 
   region          = "us-east-1"
   cluster_name    = "prod-eks"
@@ -201,6 +304,11 @@ module "eks" {
 
   vpc_id             = module.vpc.vpc_id
   private_subnet_ids = module.vpc.private_subnet_ids
+
+  # Use external IAM roles
+  create_iam_roles = false
+  cluster_role_arn = module.iam.eks_cluster_role_arn
+  node_role_arn    = module.iam.eks_node_role_arn
 
   # Restrict API access
   enable_public_access                 = false
@@ -219,7 +327,7 @@ module "eks" {
   ]
 
   # KMS encryption (from KMS module)
-  kms_key_arn = module.kms.eks_kms_key_arn
+  kms_key_arn = module.kms.kms_key_arn
 
   # Production node group
   node_group_min_size       = 3

@@ -35,5 +35,10 @@ output "node_group_name" {
 
 output "node_group_iam_role_arn" {
   description = "IAM role ARN for the node group"
-  value       = aws_iam_role.node_group.arn
+  value       = var.create_iam_roles ? aws_iam_role.node_group[0].arn : var.node_role_arn
+}
+
+output "cluster_iam_role_arn" {
+  description = "IAM role ARN for the cluster"
+  value       = var.create_iam_roles ? aws_iam_role.cluster[0].arn : var.cluster_role_arn
 }
