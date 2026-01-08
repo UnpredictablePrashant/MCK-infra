@@ -226,7 +226,7 @@ module "eks" {
 
 **Important**: When `create_iam_roles = false`, both `cluster_role_arn` and `node_role_arn` must be provided with valid IAM role ARNs. The module validates:
 - ARNs are not empty when using external roles
-- ARNs follow the format: `arn:aws:iam::123456789012:role/role-name`
+- ARNs follow the format: `arn:aws:iam::0123456789012:role/role-name`
 
 ### Security Group Variables
 

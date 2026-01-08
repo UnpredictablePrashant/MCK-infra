@@ -68,8 +68,8 @@ module "ecr" {
   repository_names            = ["my-app"]
   enable_repository_policy    = true
   repository_policy_principals = [
-    "arn:aws:iam::123456789012:role/eks-node-role",
-    "arn:aws:iam::123456789012:user/developer"
+    "arn:aws:iam::0123456789012:role/eks-node-role",
+    "arn:aws:iam::0123456789012:user/developer"
   ]
 }
 ```
@@ -83,7 +83,7 @@ module "ecr" {
   repository_names                   = ["my-app"]
   enable_repository_read_write_policy = true
   repository_read_write_principals   = [
-    "arn:aws:iam::123456789012:role/ci-cd-role"
+    "arn:aws:iam::0123456789012:role/ci-cd-role"
   ]
 }
 ```
@@ -110,9 +110,9 @@ module "ecr" {
   
   # Access Control
   enable_repository_policy          = true
-  repository_policy_principals      = ["arn:aws:iam::123456789012:role/eks-node-role"]
+  repository_policy_principals      = ["arn:aws:iam::0123456789012:role/eks-node-role"]
   enable_repository_read_write_policy = true
-  repository_read_write_principals  = ["arn:aws:iam::123456789012:role/ci-cd-role"]
+  repository_read_write_principals  = ["arn:aws:iam::0123456789012:role/ci-cd-role"]
   
   # Tagging
   environment = "production"
@@ -213,7 +213,7 @@ The module outputs Docker login commands for easy authentication:
 
 ```bash
 $(terraform output -raw docker_login_commands | jq -r '.my-app')
-docker push 123456789012.dkr.ecr.us-east-1.amazonaws.com/my-app:latest
+docker push 0123456789012.dkr.ecr.us-east-1.amazonaws.com/my-app:latest
 ```
 
 ## Cross-Account Access
@@ -223,7 +223,7 @@ To allow another AWS account to pull images:
 ```hcl
 enable_repository_policy = true
 repository_policy_principals = [
-  "arn:aws:iam::111111111111:root"  # External account ID
+  "arn:aws:iam::0123456789012:root"  # External account ID
 ]
 ```
 

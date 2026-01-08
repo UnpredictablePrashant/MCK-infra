@@ -3,30 +3,30 @@
 ########################################
 
 locals {
-  name_prefix = "mck-dev-lab2"
+  name_prefix = "mck-dev-lab1"
   product_id  = "00000"
   used_for    = "non-prod"
 
   common_tags = {
     Project     = "mck"
-    Environment = "dev-lab2"
+    Environment = "dev-lab1"
     ManagedBy   = "Terraform"
   }
 }
 
 ########################################
 # VPC Module
-#########################################
+########################################
 
 module "vpc" {
   source = "../modules/vpc"
 
   name       = local.name_prefix
-  cidr_block = "10.0.0.0/16"
+  cidr_block = "10.1.0.0/16"
   azs        = ["us-east-1a", "us-east-1b"]
 
-  public_subnets  = ["10.0.0.0/24", "10.0.1.0/24"]
-  private_subnets = ["10.0.10.0/24", "10.0.11.0/24"]
+  public_subnets  = ["10.1.0.0/24", "10.1.1.0/24"]
+  private_subnets = ["10.1.10.0/24", "10.1.11.0/24"]
 
   # Feature toggles
   enable_vpc              = true
@@ -50,9 +50,9 @@ module "kms" {
   source = "../modules/kms"
 
   project_name             = "mck"
-  environment              = "dev"
-  kms_key_description      = "KMS key for MCK EKS cluster encryption"
-  kms_alias_name           = "mck-dev-eks-encryption"
+  environment              = "dev-lab1"
+  kms_key_description      = "KMS key for MCK EKS Lab1 cluster encryption"
+  kms_alias_name           = "mck-dev-lab1-eks-encryption"
   kms_deletion_window_days = 10
   kms_enable_key_rotation  = true
 
@@ -73,7 +73,7 @@ module "iam" {
   depends_on = [module.kms]
 
   project_name               = "mck"
-  environment                = "dev"
+  environment                = "dev-lab1"
   region                     = "us-east-1"
   cluster_name               = "${local.name_prefix}-eks"
   cluster_version            = "1.34"
@@ -201,7 +201,7 @@ module "eks" {
       from_port   = 443
       to_port     = 443
       protocol    = "tcp"
-      cidr_blocks = ["10.0.0.0/16"] # VPC CIDR only
+      cidr_blocks = ["10.1.0.0/16"] # VPC CIDR only
     }
   ]
 
@@ -221,7 +221,7 @@ module "eks" {
       from_port       = 10250
       to_port         = 10250
       protocol        = "tcp"
-      cidr_blocks     = ["10.0.10.0/24", "10.0.11.0/24"] # Private subnets
+      cidr_blocks     = ["10.1.10.0/24", "10.1.11.0/24"] # Private subnets
       security_groups = []
       self            = false
     },
@@ -230,7 +230,7 @@ module "eks" {
       from_port       = 80
       to_port         = 80
       protocol        = "tcp"
-      cidr_blocks     = ["10.0.0.0/16"] # VPC CIDR for internal access
+      cidr_blocks     = ["10.1.0.0/16"] # VPC CIDR for internal access
       security_groups = []
       self            = false
     },
@@ -239,7 +239,7 @@ module "eks" {
       from_port       = 8080
       to_port         = 8080
       protocol        = "tcp"
-      cidr_blocks     = ["10.0.0.0/16"] # VPC CIDR for internal access
+      cidr_blocks     = ["10.1.0.0/16"] # VPC CIDR for internal access
       security_groups = []
       self            = false
     },
@@ -276,7 +276,7 @@ module "eks" {
   node_group_disk_size      = 20
 
   node_group_labels = {
-    environment = "dev"
+    environment = "dev-lab1"
   }
 
   node_group_tags = {
@@ -299,8 +299,8 @@ module "ecr" {
   depends_on = [module.kms]
 
   project_name            = "mck"
-  environment             = "dev"
-  repository_names        = ["mck-app", "mck-api", "mck-worker"]
+  environment             = "dev-lab1"
+  repository_names        = ["mck-lab1-app", "mck-lab1-api", "mck-lab1-worker"]
   image_tag_mutability    = "MUTABLE"
   scan_on_push            = true
   enable_encryption       = true
@@ -315,3 +315,4 @@ module "ecr" {
 
   tags = local.common_tags
 }
+
