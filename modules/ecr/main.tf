@@ -8,8 +8,8 @@
 resource "aws_ecr_repository" "this" {
   for_each = toset(local.repositories)
 
-  name                       = each.value
-  image_tag_mutability       = var.image_tag_mutability
+  name                 = each.value
+  image_tag_mutability = var.image_tag_mutability
   image_scanning_configuration {
     scan_on_push = var.scan_on_push
   }
@@ -45,10 +45,10 @@ resource "aws_ecr_lifecycle_policy" "this" {
         rulePriority = 1
         description  = "Delete untagged images older than ${var.image_expiration_days} days"
         selection = {
-          tagStatus     = "untagged"
-          countType     = "sinceImagePushed"
-          countUnit     = "days"
-          countNumber   = var.image_expiration_days
+          tagStatus   = "untagged"
+          countType   = "sinceImagePushed"
+          countUnit   = "days"
+          countNumber = var.image_expiration_days
         }
         action = {
           type = "expire"

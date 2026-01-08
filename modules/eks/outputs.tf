@@ -47,3 +47,32 @@ output "auto_mode_enabled" {
   description = "Whether EKS Auto Mode is enabled"
   value       = var.enable_auto_mode
 }
+
+output "access_entries" {
+  description = "Map of IAM access entries created"
+  value = {
+    for k, v in aws_eks_access_entry.this : k => {
+      principal_arn     = v.principal_arn
+      kubernetes_groups = v.kubernetes_groups
+      type              = v.type
+      access_entry_arn  = v.access_entry_arn
+    }
+  }
+}
+
+output "access_entry_policy_associations" {
+  description = "Map of IAM access entry policy associations"
+  value = {
+    for k, v in aws_eks_access_policy_association.this : k => {
+      principal_arn     = v.principal_arn
+      policy_arn        = v.policy_arn
+      access_scope_type = v.access_scope[0].type
+      associated_at     = v.associated_at
+    }
+  }
+}
+
+output "authentication_mode" {
+  description = "EKS cluster authentication mode"
+  value       = aws_eks_cluster.this.access_config[0].authentication_mode
+}

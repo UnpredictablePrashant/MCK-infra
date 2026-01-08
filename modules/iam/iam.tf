@@ -4,8 +4,8 @@
 
 # EKS Cluster Service Role
 resource "aws_iam_role" "eks_cluster_role" {
-  name               = var.cluster_role_name
-  path               = var.iam_role_path
+  name = var.cluster_role_name
+  path = var.iam_role_path
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -24,6 +24,8 @@ resource "aws_iam_role" "eks_cluster_role" {
     {
       Name        = var.cluster_role_name
       Environment = var.environment
+      product_id  = var.product_id
+      used_for    = var.used_for
     }
   )
 }
@@ -67,7 +69,9 @@ resource "aws_iam_policy" "eks_cluster_kms" {
   tags = merge(
     var.tags,
     {
-      Name = "${var.cluster_role_name}-kms-policy"
+      Name       = "${var.cluster_role_name}-kms-policy"
+      product_id = var.product_id
+      used_for   = var.used_for
     }
   )
 }
@@ -123,7 +127,9 @@ resource "aws_iam_policy" "eks_cluster_vpc" {
   tags = merge(
     var.tags,
     {
-      Name = "${var.cluster_role_name}-vpc-policy"
+      Name       = "${var.cluster_role_name}-vpc-policy"
+      product_id = var.product_id
+      used_for   = var.used_for
     }
   )
 }
@@ -139,8 +145,8 @@ resource "aws_iam_role_policy_attachment" "eks_cluster_vpc" {
 
 # EKS Node (Worker) IAM Role
 resource "aws_iam_role" "eks_node_role" {
-  name               = var.node_role_name
-  path               = var.iam_role_path
+  name = var.node_role_name
+  path = var.iam_role_path
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -159,6 +165,8 @@ resource "aws_iam_role" "eks_node_role" {
     {
       Name        = var.node_role_name
       Environment = var.environment
+      product_id  = var.product_id
+      used_for    = var.used_for
     }
   )
 }
@@ -204,7 +212,9 @@ resource "aws_iam_policy" "eks_node_kms" {
   tags = merge(
     var.tags,
     {
-      Name = "${var.node_role_name}-kms-policy"
+      Name       = "${var.node_role_name}-kms-policy"
+      product_id = var.product_id
+      used_for   = var.used_for
     }
   )
 }
@@ -258,7 +268,9 @@ resource "aws_iam_policy" "eks_node_vpc" {
   tags = merge(
     var.tags,
     {
-      Name = "${var.node_role_name}-vpc-policy"
+      Name       = "${var.node_role_name}-vpc-policy"
+      product_id = var.product_id
+      used_for   = var.used_for
     }
   )
 }

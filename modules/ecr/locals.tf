@@ -14,6 +14,8 @@ locals {
       Environment = var.environment
       Project     = var.project_name
       ManagedBy   = "Terraform"
+      product_id  = var.product_id
+      used_for    = var.used_for
     }
   )
 
@@ -21,6 +23,6 @@ locals {
   account_id = data.aws_caller_identity.current.account_id
 
   # Current AWS region
-  region = data.aws_region.current.name
+  region = data.aws_region.current.id
 }
 

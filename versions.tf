@@ -4,12 +4,9 @@
 
 terraform {
   required_version = ">=1.9, <1.13"
+  cloud {
+    hostname     = "terraform.mckinsey.cloud"
+    organization = "OFT-MCS-AWS-PLATFORMS"
 
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = ">=5.23, <7"
-    }
   }
 }
-

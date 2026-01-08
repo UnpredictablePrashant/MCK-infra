@@ -2,9 +2,9 @@
 
 # Create KMS Key for EKS
 resource "aws_kms_key" "eks" {
-  description             = var.kms_key_description
-  deletion_window_in_days = var.kms_deletion_window_days
-  enable_key_rotation     = var.kms_enable_key_rotation
+  description                        = var.kms_key_description
+  deletion_window_in_days            = var.kms_deletion_window_days
+  enable_key_rotation                = var.kms_enable_key_rotation
   bypass_policy_lockout_safety_check = false
 
   tags = merge(
@@ -13,6 +13,8 @@ resource "aws_kms_key" "eks" {
       Name        = "${var.project_name}-kms-key"
       Environment = var.environment
       Purpose     = "EKS-Encryption"
+      product_id  = var.product_id
+      used_for    = var.used_for
     }
   )
 }

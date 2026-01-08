@@ -19,7 +19,7 @@ resource "aws_iam_role" "cluster" {
     ]
   })
 
-  tags = merge(var.tags, {
+  tags = merge(local.common_tags, {
     "Name" = "${var.cluster_name}-cluster-role"
   })
 }
@@ -57,7 +57,7 @@ resource "aws_iam_role" "node_group" {
     ]
   })
 
-  tags = merge(var.tags, {
+  tags = merge(local.common_tags, {
     "Name" = "${var.cluster_name}-nodegroup-role"
   })
 }
@@ -140,7 +140,7 @@ resource "aws_security_group" "cluster" {
     }
   }
 
-  tags = merge(var.tags, {
+  tags = merge(local.common_tags, {
     "Name" = "${var.cluster_name}-cluster-sg"
   })
 
@@ -168,7 +168,7 @@ resource "aws_eks_cluster" "this" {
 
   # Access configuration - Required for Auto Mode
   access_config {
-    authentication_mode                         = var.enable_auto_mode ? "API_AND_CONFIG_MAP" : "CONFIG_MAP"
+    authentication_mode                         = var.enable_auto_mode ? "API_AND_CONFIG_MAP" : var.authentication_mode
     bootstrap_cluster_creator_admin_permissions = true
   }
 
@@ -215,7 +215,7 @@ resource "aws_eks_cluster" "this" {
     }
   }
 
-  tags = var.tags
+  tags = local.common_tags
 
   # Note: Dependencies are handled implicitly through role_arn reference
   # When create_iam_roles=true, role_arn references aws_iam_role.cluster[0].arn
@@ -248,7 +248,7 @@ resource "aws_eks_node_group" "default" {
 
   labels = var.node_group_labels
 
-  tags = merge(var.tags, var.node_group_tags)
+  tags = merge(local.common_tags, var.node_group_tags)
 
   lifecycle {
     create_before_destroy = true
@@ -298,7 +298,7 @@ resource "aws_iam_role" "ebs_csi" {
     ]
   })
 
-  tags = merge(var.tags, {
+  tags = merge(local.common_tags, {
     "Name" = "${var.cluster_name}-ebs-csi-irsa"
   })
 }
@@ -323,7 +323,7 @@ resource "aws_eks_addon" "vpc_cni" {
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
 
-  tags = var.tags
+  tags = local.common_tags
 }
 
 resource "aws_eks_addon" "ebs_csi" {
@@ -336,9 +336,62 @@ resource "aws_eks_addon" "ebs_csi" {
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
 
-  tags = var.tags
+  tags = local.common_tags
 
   depends_on = [
     aws_iam_role_policy_attachment.ebs_csi[0]
+  ]
+}
+
+########################
+# IAM ACCESS ENTRIES   #
+########################
+# Only works with API or API_AND_CONFIG_MAP authentication mode
+
+# Standard access entry for node role (automatically grants EC2 nodes cluster access)
+resource "aws_eks_access_entry" "node_role" {
+  count = var.enable_iam_access_entries && var.create_standard_access_entries && !var.enable_auto_mode ? 1 : 0
+
+  cluster_name  = aws_eks_cluster.this.name
+  principal_arn = var.create_iam_roles ? aws_iam_role.node_group[0].arn : var.node_role_arn
+  type          = "EC2_LINUX"
+
+  tags = merge(local.common_tags, {
+    "Name" = "${var.cluster_name}-node-access-entry"
+  })
+}
+
+# Custom access entries defined by user
+resource "aws_eks_access_entry" "this" {
+  for_each = var.enable_iam_access_entries ? var.access_entries : {}
+
+  cluster_name      = aws_eks_cluster.this.name
+  principal_arn     = each.key
+  kubernetes_groups = each.value.kubernetes_groups
+  type              = each.value.type
+
+  tags = merge(local.common_tags, {
+    "Name" = "${var.cluster_name}-${replace(each.key, "/[^a-zA-Z0-9-]/", "-")}"
+  })
+
+  depends_on = [aws_eks_cluster.this]
+}
+
+# Policy associations for access entries
+resource "aws_eks_access_policy_association" "this" {
+  for_each = var.enable_iam_access_entries ? var.access_entry_policy_associations : {}
+
+  cluster_name  = aws_eks_cluster.this.name
+  principal_arn = each.value.principal_arn
+  policy_arn    = each.value.policy_arn
+
+  access_scope {
+    type       = each.value.access_scope.type
+    namespaces = each.value.access_scope.type == "namespace" ? each.value.access_scope.namespaces : []
+  }
+
+  depends_on = [
+    aws_eks_access_entry.this,
+    aws_eks_access_entry.node_role
   ]
 }
