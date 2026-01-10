@@ -20,6 +20,17 @@ variable "enable_auto_mode" {
   default     = false
 }
 
+variable "authentication_mode" {
+  description = "Authentication mode for the EKS cluster. Valid values are CONFIG_MAP, API, or API_AND_CONFIG_MAP. API_AND_CONFIG_MAP is recommended for EKS access management."
+  type        = string
+  default     = "CONFIG_MAP"
+
+  validation {
+    condition     = contains(["CONFIG_MAP", "API", "API_AND_CONFIG_MAP"], var.authentication_mode)
+    error_message = "authentication_mode must be one of: CONFIG_MAP, API, API_AND_CONFIG_MAP"
+  }
+}
+
 variable "vpc_id" {
   description = "ID of the VPC where EKS will run"
   type        = string
@@ -53,10 +64,10 @@ variable "cluster_role_arn" {
 
   validation {
     condition = (
-      var.cluster_role_arn == "" 
+      var.cluster_role_arn == ""
       || can(regex("^arn:aws[a-z-]*:iam::[0-9]{12}:role/.+", var.cluster_role_arn))
     )
-    error_message = "The cluster_role_arn must be a valid IAM role ARN (e.g., arn:aws:iam::123456789012:role/role-name) or empty string."
+    error_message = "The cluster_role_arn must be a valid IAM role ARN (e.g., arn:aws:iam::0123456789012:role/role-name) or empty string."
   }
 }
 
@@ -67,10 +78,10 @@ variable "node_role_arn" {
 
   validation {
     condition = (
-      var.node_role_arn == "" 
+      var.node_role_arn == ""
       || can(regex("^arn:aws[a-z-]*:iam::[0-9]{12}:role/.+", var.node_role_arn))
     )
-    error_message = "The node_role_arn must be a valid IAM role ARN (e.g., arn:aws:iam::123456789012:role/role-name) or empty string."
+    error_message = "The node_role_arn must be a valid IAM role ARN (e.g., arn:aws:iam::0123456789012:role/role-name) or empty string."
   }
 }
 
@@ -260,4 +271,95 @@ variable "oidc_thumbprint" {
   description = "Thumbprint for the EKS OIDC provider (default for public EKS OIDC)"
   type        = string
   default     = "9e99a48a9960b14926bb7f3b02e22da0afd10df6"
+}
+
+########################
+# IAM ACCESS ENTRIES   #
+########################
+
+variable "enable_iam_access_entries" {
+  description = "Enable IAM access entries for EKS cluster. Only works with API or API_AND_CONFIG_MAP authentication mode."
+  type        = bool
+  default     = true
+}
+
+variable "access_entries" {
+  description = <<-EOT
+    Map of IAM access entries to create for the cluster.
+    Key is the principal ARN (IAM role/user), value is configuration object.
+    
+    Example:
+    {
+      "arn:aws:iam::0123456789012:role/DevRole" = {
+        kubernetes_groups = ["developers"]
+        type             = "STANDARD"  # STANDARD, FARGATE_LINUX, or EC2_LINUX
+      }
+      "arn:aws:iam::0123456789012:role/AdminRole" = {
+        kubernetes_groups = []
+        type             = "STANDARD"
+      }
+    }
+  EOT
+  type = map(object({
+    kubernetes_groups = optional(list(string), [])
+    type              = optional(string, "STANDARD")
+  }))
+  default = {}
+}
+
+variable "access_entry_policy_associations" {
+  description = <<-EOT
+    Map of IAM access entry policy associations.
+    Key is a unique identifier, value is configuration object.
+    
+    Available policy ARNs:
+    - AmazonEKSClusterAdminPolicy
+    - AmazonEKSAdminPolicy
+    - AmazonEKSEditPolicy
+    - AmazonEKSViewPolicy
+    
+    Example:
+    {
+      "admin-role-cluster-admin" = {
+        principal_arn = "arn:aws:iam::0123456789012:role/AdminRole"
+        policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+        access_scope = {
+          type = "cluster"  # cluster or namespace
+        }
+      }
+      "dev-role-namespace-edit" = {
+        principal_arn = "arn:aws:iam::0123456789012:role/DevRole"
+        policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSEditPolicy"
+        access_scope = {
+          type       = "namespace"
+          namespaces = ["development", "staging"]
+        }
+      }
+    }
+  EOT
+  type = map(object({
+    principal_arn = string
+    policy_arn    = string
+    access_scope = object({
+      type       = string
+      namespaces = optional(list(string), [])
+    })
+  }))
+  default = {}
+}
+
+variable "create_standard_access_entries" {
+  description = "Automatically create standard access entries for cluster creator and node role"
+  type        = bool
+  default     = true
+}
+
+variable "product_id" {
+  description = "Product ID tag for resource tracking"
+  type        = string
+}
+
+variable "used_for" {
+  description = "Used for tag to identify resource purpose (e.g., prod, non-prod)"
+  type        = string
 }

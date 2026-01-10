@@ -9,7 +9,7 @@ resource "aws_vpc" "this" {
   enable_dns_hostnames = true
 
   tags = merge(
-    var.tags,
+    local.common_tags,
     {
       Name = "${var.name}-vpc"
     }
@@ -30,7 +30,7 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = true
 
   tags = merge(
-    var.tags,
+    local.common_tags,
     {
       Name = "${var.name}-public-${count.index + 1}"
       Tier = "public"
@@ -47,7 +47,7 @@ resource "aws_subnet" "private" {
   availability_zone = var.azs[count.index]
 
   tags = merge(
-    var.tags,
+    local.common_tags,
     {
       Name = "${var.name}-private-${count.index + 1}"
       Tier = "private"
@@ -65,7 +65,7 @@ resource "aws_internet_gateway" "this" {
   vpc_id = local.vpc_id
 
   tags = merge(
-    var.tags,
+    local.common_tags,
     {
       Name = "${var.name}-igw"
     }
@@ -83,7 +83,7 @@ resource "aws_eip" "nat" {
   domain = "vpc"
 
   tags = merge(
-    var.tags,
+    local.common_tags,
     {
       Name = "${var.name}-nat-eip"
     }
@@ -98,7 +98,7 @@ resource "aws_nat_gateway" "this" {
   subnet_id = length(aws_subnet.public) > 0 ? aws_subnet.public[0].id : null
 
   tags = merge(
-    var.tags,
+    local.common_tags,
     {
       Name = "${var.name}-nat-gw"
     }
@@ -118,7 +118,7 @@ resource "aws_route_table" "public" {
   vpc_id = local.vpc_id
 
   tags = merge(
-    var.tags,
+    local.common_tags,
     {
       Name = "${var.name}-public-rt"
     }
@@ -131,7 +131,7 @@ resource "aws_route" "public_internet_access" {
     && var.enable_route_tables
     && var.enable_internet_gateway
     && length(aws_route_table.public) > 0
-    && length(aws_internet_gateway.this) > 0) ? 1 : 0
+  && length(aws_internet_gateway.this) > 0) ? 1 : 0
 
   route_table_id         = aws_route_table.public[0].id
   destination_cidr_block = "0.0.0.0/0"
@@ -144,7 +144,7 @@ resource "aws_route_table_association" "public_association" {
     && var.enable_route_tables
     && length(aws_route_table.public) > 0
     ? length(aws_subnet.public)
-    : 0)
+  : 0)
 
   subnet_id      = aws_subnet.public[count.index].id
   route_table_id = aws_route_table.public[0].id
@@ -156,12 +156,12 @@ resource "aws_route_table" "private" {
     && var.enable_route_tables
     && length(aws_subnet.private) > 0
     ? 1
-    : 0)
+  : 0)
 
   vpc_id = local.vpc_id
 
   tags = merge(
-    var.tags,
+    local.common_tags,
     {
       Name = "${var.name}-private-rt"
     }
@@ -176,7 +176,7 @@ resource "aws_route" "private_nat_access" {
     && length(aws_route_table.private) > 0
     && length(aws_nat_gateway.this) > 0
     ? 1
-    : 0)
+  : 0)
 
   route_table_id         = aws_route_table.private[0].id
   destination_cidr_block = "0.0.0.0/0"
@@ -189,7 +189,7 @@ resource "aws_route_table_association" "private_association" {
     && var.enable_route_tables
     && length(aws_route_table.private) > 0
     ? length(aws_subnet.private)
-    : 0)
+  : 0)
 
   subnet_id      = aws_subnet.private[count.index].id
   route_table_id = aws_route_table.private[0].id
@@ -250,7 +250,7 @@ resource "aws_security_group" "default" {
   }
 
   tags = merge(
-    var.tags,
+    local.common_tags,
     {
       Name = "${coalesce(var.security_group_name, var.name)}-sg"
     }

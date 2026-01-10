@@ -7,10 +7,8 @@ provider "aws" {
   default_tags {
     tags = {
       Project     = "mck"
-      Environment = "dev"
+      Environment = "dev-lab1"
       ManagedBy   = "Terraform"
     }
   }
 }
-
-

@@ -115,3 +115,13 @@ variable "tags" {
     Module    = "ECR"
   }
 }
+
+variable "product_id" {
+  description = "Product ID tag for resource tracking"
+  type        = string
+}
+
+variable "used_for" {
+  description = "Used for tag to identify resource purpose (e.g., prod, non-prod)"
+  type        = string
+}

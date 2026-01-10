@@ -3,6 +3,11 @@ output "vpc_id" {
   description = "ID of the VPC"
 }
 
+output "vpc_cidr" {
+  value       = var.cidr_block
+  description = "CIDR block of the VPC"
+}
+
 output "public_subnet_ids" {
   value       = [for s in aws_subnet.public : s.id]
   description = "IDs of public subnets"
@@ -21,6 +26,11 @@ output "internet_gateway_id" {
 output "nat_gateway_id" {
   value       = length(aws_nat_gateway.this) > 0 ? aws_nat_gateway.this[0].id : null
   description = "NAT Gateway ID (if created)"
+}
+
+output "nat_gateway_ids" {
+  value       = [for nat in aws_nat_gateway.this : nat.id]
+  description = "List of NAT Gateway IDs (if created)"
 }
 
 output "public_route_table_id" {

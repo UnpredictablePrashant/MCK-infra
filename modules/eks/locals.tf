@@ -9,7 +9,7 @@ locals {
   # Effective SG ID, whether created by the module or provided externally
   cluster_security_group_id_effective = (var.create_cluster_security_group
     ? aws_security_group.cluster[0].id
-    : var.cluster_security_group_id)
+  : var.cluster_security_group_id)
 
   # Validation: Ensure IAM role ARNs are provided when create_iam_roles is false
   validate_cluster_role_arn = (
@@ -22,5 +22,14 @@ locals {
     var.create_iam_roles || var.node_role_arn != ""
     ? true
     : tobool("ERROR: node_role_arn must be provided when create_iam_roles is false")
+  )
+  
+  # Merge mandatory tags with user-provided tags
+  common_tags = merge(
+    var.tags,
+    {
+      product_id = var.product_id
+      used_for   = var.used_for
+    }
   )
 }

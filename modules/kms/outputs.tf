@@ -13,3 +13,8 @@ output "kms_alias" {
   description = "The alias of the KMS key for EKS"
   value       = aws_kms_alias.eks.name
 }
+
+output "kms_key_alias" {
+  description = "The alias of the KMS key for EKS"
+  value       = aws_kms_alias.eks.name
+}

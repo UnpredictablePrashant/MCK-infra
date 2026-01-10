@@ -1,8 +1,8 @@
-# EKS-Infra-2 (Lab2) Documentation
+# EKS-Infra-1 (Lab1) Documentation
 
 ## 🎯 Overview
 
-**EKS-Infra-2** is the Lab2 environment deployed to AWS Account `0123456789012` with workspace `Srelearn02-labs`.
+**EKS-Infra-1** is the Lab1 environment deployed to AWS Account `0123456789012` with workspace `Srelearn03-labs`.
 
 ---
 
@@ -11,13 +11,13 @@
 | Parameter | Value |
 |-----------|-------|
 | **AWS Account** | 0123456789012 |
-| **Workspace** | Srelearn02-labs |
-| **Cluster Name** | mck-dev-lab2-eks |
-| **VPC CIDR** | 10.0.0.0/16 |
-| **Public Subnets** | 10.0.0.0/24, 10.0.1.0/24 |
-| **Private Subnets** | 10.0.10.0/24, 10.0.11.0/24 |
-| **Name Prefix** | mck-dev-lab2 |
-| **Environment** | dev-lab2 |
+| **Workspace** | Srelearn03-labs |
+| **Cluster Name** | mck-dev-lab1-eks |
+| **VPC CIDR** | 10.1.0.0/16 |
+| **Public Subnets** | 10.1.0.0/24, 10.1.1.0/24 |
+| **Private Subnets** | 10.1.10.0/24, 10.1.11.0/24 |
+| **Name Prefix** | mck-dev-lab1 |
+| **Environment** | dev-lab1 |
 | **Region** | us-east-1 |
 | **Kubernetes Version** | 1.34 |
 
@@ -28,8 +28,8 @@
 ### Deploy Infrastructure
 
 ```bash
-cd EKS-Infra-2
-export TF_WORKSPACE=Srelearn02-labs
+cd EKS-Infra-1
+export TF_WORKSPACE=Srelearn03-labs
 terraform init
 terraform plan
 terraform apply
@@ -38,7 +38,7 @@ terraform apply
 ### Access Cluster
 
 ```bash
-aws eks update-kubeconfig --name mck-dev-lab2-eks --region us-east-1
+aws eks update-kubeconfig --name mck-dev-lab1-eks --region us-east-1
 kubectl get nodes
 ```
 
@@ -47,7 +47,7 @@ kubectl get nodes
 ## 📦 Components
 
 ### VPC
-- **CIDR**: 10.0.0.0/16
+- **CIDR**: 10.1.0.0/16
 - **AZs**: us-east-1a, us-east-1b
 - **Public Subnets**: 2
 - **Private Subnets**: 2
@@ -65,13 +65,13 @@ kubectl get nodes
 ### IAM Access Entries
 1. **AWS Service Role** - Cluster operations
 2. **Infra-lab-EKS** - GitHub Actions deployment
-3. **mck-dev-lab2-eks-node-role** - Worker nodes (EC2_LINUX)
+3. **mck-dev-lab1-eks-node-role** - Worker nodes (EC2_LINUX)
 4. **admin** - Full cluster administration
 
 ### ECR Repositories
-- mck-app
-- mck-api
-- mck-worker
+- mck-lab1-app
+- mck-lab1-api
+- mck-lab1-worker
 
 ---
 
@@ -87,19 +87,19 @@ arn:aws:iam::0123456789012:role/admin
 ### Created by Terraform
 
 ```
-arn:aws:iam::0123456789012:role/mck-dev-lab2-eks-cluster-role
-arn:aws:iam::0123456789012:role/mck-dev-lab2-eks-node-role
+arn:aws:iam::0123456789012:role/mck-dev-lab1-eks-cluster-role
+arn:aws:iam::0123456789012:role/mck-dev-lab1-eks-node-role
 ```
 
 ---
 
 ## 🎯 GitHub Workflow
 
-**File**: `.github/workflows/infra-eks-sre02-lab2.yaml`
+**File**: `.github/workflows/infra-eks-sre03-lab1.yaml`
 
 **Triggers**:
 - Manual: `workflow_dispatch`
-- Auto: Push to main when `EKS-Infra-2/` or `modules/` change
+- Auto: Push to main when `EKS-Infra-1/` or `modules/` change
 
 **Actions**:
 - `plan` - Preview changes
@@ -136,7 +136,7 @@ access_entries = {
 
 ### Restrict Public Access
 
-Edit `main.tf` around line 183:
+Edit `main.tf` around line 185:
 
 ```hcl
 cluster_endpoint_public_access_cidrs = ["YOUR-IP/32"]
@@ -156,13 +156,13 @@ terraform state list
 terraform output
 
 # Verify cluster
-aws eks describe-cluster --name mck-dev-lab2-eks --region us-east-1
+aws eks describe-cluster --name mck-dev-lab1-eks --region us-east-1
 ```
 
 ### Check Access Entries
 
 ```bash
-aws eks list-access-entries --cluster-name mck-dev-lab2-eks --region us-east-1
+aws eks list-access-entries --cluster-name mck-dev-lab1-eks --region us-east-1
 ```
 
 ### Test kubectl Access
@@ -181,13 +181,13 @@ kubectl auth can-i get pods
 
 ```bash
 # Update kubeconfig
-aws eks update-kubeconfig --name mck-dev-lab2-eks --region us-east-1
+aws eks update-kubeconfig --name mck-dev-lab1-eks --region us-east-1
 
 # Verify IAM identity
 aws sts get-caller-identity
 
 # Check access entries
-aws eks list-access-entries --cluster-name mck-dev-lab2-eks --region us-east-1
+aws eks list-access-entries --cluster-name mck-dev-lab1-eks --region us-east-1
 ```
 
 ### Terraform Errors
@@ -200,7 +200,7 @@ terraform init -upgrade
 terraform validate
 
 # Check workspace
-echo $TF_WORKSPACE  # Should be: Srelearn02-labs
+echo $TF_WORKSPACE  # Should be: Srelearn03-labs
 ```
 
 ---
@@ -210,15 +210,15 @@ echo $TF_WORKSPACE  # Should be: Srelearn02-labs
 - **Main README**: `../README.md`
 - **IAM Guide**: `../IAM-ACCESS-ENTRIES.md`
 - **Modules**: `../modules/README.md`
-- **Lab1**: `../EKS-Infra-1/README.md`
+- **Lab2**: `../EKS-Infra-2/README.md`
 
 ---
 
 ## ✅ Summary
 
-- ✅ Complete EKS infrastructure for Lab2
+- ✅ Complete EKS infrastructure for Lab1
 - ✅ AWS Account: 0123456789012
-- ✅ Workspace: Srelearn02-labs
+- ✅ Workspace: Srelearn03-labs
 - ✅ IAM Access Entries configured
 - ✅ GitHub workflow ready
 - ✅ Production-ready security
