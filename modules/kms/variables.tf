@@ -9,25 +9,10 @@ variable "tags" {
 }
 
 
-variable "environment" {
-  description = "Environment name (e.g., dev, staging, production)"
+variable "name_prefix" {
+  description = "Prefix for all resource names (e.g., mck-dev-lab1)"
   type        = string
-  default     = "production"
 }
-variable "project_name" {
-  description = "Project name for resource naming"
-  type        = string
-  default     = "eks"
-}
-
-variable "region" {
-  description = "AWS region"
-  type        = string
-  default     = "us-east-1"
-}
-# ========================================
-# KMS VARIABLES
-# ========================================
 
 variable "kms_deletion_window_days" {
   description = "KMS key deletion window in days"
@@ -45,12 +30,6 @@ variable "kms_key_description" {
   description = "Description of the KMS key"
   type        = string
   default     = "KMS key for EKS cluster encryption at rest"
-}
-
-variable "kms_alias_name" {
-  description = "Name of the KMS key alias"
-  type        = string
-  default     = "eks-cluster-encryption"
 }
 
 variable "product_id" {

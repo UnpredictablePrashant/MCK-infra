@@ -3,19 +3,17 @@
 # ========================================
 
 locals {
-  # Computed repository list
-  repositories = length(var.repository_names) > 0 ? var.repository_names : [var.repository_name]
+  # Computed repository list with name prefix
+  repositories = [for suffix in var.repository_suffixes : "${var.name_prefix}-${suffix}"]
 
   # Common tags for all resources
   common_tags = merge(
     var.tags,
     {
-      Module      = "ECR"
-      Environment = var.environment
-      Project     = var.project_name
-      ManagedBy   = "Terraform"
-      product_id  = var.product_id
-      used_for    = var.used_for
+      Module     = "ECR"
+      ManagedBy  = "Terraform"
+      product_id = var.product_id
+      used_for   = var.used_for
     }
   )
 

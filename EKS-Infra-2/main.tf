@@ -4,7 +4,7 @@
 
 locals {
   name_prefix = "mck-dev-lab2"
-  product_id  = "00000"
+  product_id  = "19497"
   used_for    = "non-prod"
 
   common_tags = {
@@ -49,10 +49,8 @@ module "vpc" {
 module "kms" {
   source = "../modules/kms"
 
-  project_name             = "mck"
-  environment              = "dev"
+  name_prefix              = local.name_prefix
   kms_key_description      = "KMS key for MCK EKS cluster encryption"
-  kms_alias_name           = "mck-dev-eks-encryption"
   kms_deletion_window_days = 10
   kms_enable_key_rotation  = true
 
@@ -72,15 +70,9 @@ module "iam" {
 
   depends_on = [module.kms]
 
-  project_name               = "mck"
-  environment                = "dev"
-  region                     = "us-east-1"
-  cluster_name               = "${local.name_prefix}-eks"
-  cluster_version            = "1.34"
-  cluster_role_name          = "${local.name_prefix}-eks-cluster-role"
-  node_role_name             = "${local.name_prefix}-eks-node-role"
-  node_instance_profile_name = "${local.name_prefix}-eks-node-profile"
-  iam_role_path              = "/"
+  name_prefix   = local.name_prefix
+  region        = "us-east-1"
+  iam_role_path = "/"
 
   # Mandatory tags
   product_id = local.product_id
@@ -141,14 +133,14 @@ module "eks" {
   # - Node role access is automatically configured when using create_standard_access_entries = true
   access_entries = {
     # Admin role with full cluster access
-    "arn:aws:iam::0123456789012:role/admin" = {
+    "arn:aws:iam::669643925277:role/admin" = {
       kubernetes_groups = []
       type              = "STANDARD"
     }
 
     # Additional custom roles can be added here
     # Example:
-    # "arn:aws:iam::0123456789012:role/developer" = {
+    # "arn:aws:iam::669643925277:role/developer" = {
     #   kubernetes_groups = []
     #   type              = "STANDARD"
     # }
@@ -162,7 +154,7 @@ module "eks" {
   access_entry_policy_associations = {
     # Admin role - Full cluster admin access
     "admin-cluster-admin" = {
-      principal_arn = "arn:aws:iam::0123456789012:role/admin"
+      principal_arn = "arn:aws:iam::669643925277:role/admin"
       policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
       access_scope = {
         type = "cluster"
@@ -170,7 +162,7 @@ module "eks" {
     }
 
     "admin-admin-policy" = {
-      principal_arn = "arn:aws:iam::0123456789012:role/admin"
+      principal_arn = "arn:aws:iam::669643925277:role/admin"
       policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSAdminPolicy"
       access_scope = {
         type = "cluster"
@@ -178,7 +170,7 @@ module "eks" {
     }
 
     "admin-admin-view-policy" = {
-      principal_arn = "arn:aws:iam::0123456789012:role/admin"
+      principal_arn = "arn:aws:iam::669643925277:role/admin"
       policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSAdminViewPolicy"
       access_scope = {
         type = "cluster"
@@ -298,9 +290,8 @@ module "ecr" {
 
   depends_on = [module.kms]
 
-  project_name            = "mck"
-  environment             = "dev"
-  repository_names        = ["mck-app", "mck-api", "mck-worker"]
+  name_prefix             = local.name_prefix
+  repository_suffixes     = ["app", "api", "worker"]
   image_tag_mutability    = "MUTABLE"
   scan_on_push            = true
   enable_encryption       = true

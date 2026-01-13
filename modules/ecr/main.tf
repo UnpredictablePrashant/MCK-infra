@@ -20,11 +20,9 @@ resource "aws_ecr_repository" "this" {
   }
 
   tags = merge(
-    var.tags,
+    local.common_tags,
     {
-      Name        = each.value
-      Environment = var.environment
-      Project     = var.project_name
+      Name = each.value
     }
   )
 }
