@@ -2,16 +2,15 @@
 # ECR MODULE VARIABLES
 # ========================================
 
-variable "repository_names" {
-  description = "List of ECR repository names to create"
-  type        = list(string)
-  default     = []
+variable "name_prefix" {
+  description = "Prefix for all resource names (e.g., mck-dev-lab1)"
+  type        = string
 }
 
-variable "repository_name" {
-  description = "Single ECR repository name (used if repository_names is empty)"
-  type        = string
-  default     = "my-app"
+variable "repository_suffixes" {
+  description = "List of ECR repository suffixes to create (will be prefixed with name_prefix)"
+  type        = list(string)
+  default     = ["app", "api", "worker"]
 }
 
 variable "image_tag_mutability" {
@@ -93,18 +92,6 @@ variable "repository_policy_principals" {
   description = "List of AWS principals allowed to pull images from repositories"
   type        = list(string)
   default     = []
-}
-
-variable "environment" {
-  description = "Environment name (e.g., dev, staging, production)"
-  type        = string
-  default     = "production"
-}
-
-variable "project_name" {
-  description = "Project name for resource naming and tagging"
-  type        = string
-  default     = "my-project"
 }
 
 variable "tags" {

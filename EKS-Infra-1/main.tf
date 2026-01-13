@@ -3,7 +3,7 @@
 ########################################
 
 locals {
-  name_prefix = "mck-dev-lab1"
+  name_prefix = "gravops-dev-lab1"
   product_id  = "00000"
   used_for    = "non-prod"
 
@@ -49,10 +49,8 @@ module "vpc" {
 module "kms" {
   source = "../modules/kms"
 
-  project_name             = "mck"
-  environment              = "dev-lab1"
+  name_prefix              = local.name_prefix
   kms_key_description      = "KMS key for MCK EKS Lab1 cluster encryption"
-  kms_alias_name           = "mck-dev-lab1-eks-encryption"
   kms_deletion_window_days = 10
   kms_enable_key_rotation  = true
 
@@ -72,15 +70,9 @@ module "iam" {
 
   depends_on = [module.kms]
 
-  project_name               = "mck"
-  environment                = "dev-lab1"
-  region                     = "us-east-1"
-  cluster_name               = "${local.name_prefix}-eks"
-  cluster_version            = "1.34"
-  cluster_role_name          = "${local.name_prefix}-eks-cluster-role"
-  node_role_name             = "${local.name_prefix}-eks-node-role"
-  node_instance_profile_name = "${local.name_prefix}-eks-node-profile"
-  iam_role_path              = "/"
+  name_prefix   = local.name_prefix
+  region        = "us-east-1"
+  iam_role_path = "/"
 
   # Mandatory tags
   product_id = local.product_id
@@ -298,9 +290,8 @@ module "ecr" {
 
   depends_on = [module.kms]
 
-  project_name            = "mck"
-  environment             = "dev-lab1"
-  repository_names        = ["mck-lab1-app", "mck-lab1-api", "mck-lab1-worker"]
+  name_prefix             = local.name_prefix
+  repository_suffixes     = ["app", "api", "worker"]
   image_tag_mutability    = "MUTABLE"
   scan_on_push            = true
   enable_encryption       = true

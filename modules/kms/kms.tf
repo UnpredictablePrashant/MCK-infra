@@ -10,18 +10,17 @@ resource "aws_kms_key" "eks" {
   tags = merge(
     var.tags,
     {
-      Name        = "${var.project_name}-kms-key"
-      Environment = var.environment
-      Purpose     = "EKS-Encryption"
-      product_id  = var.product_id
-      used_for    = var.used_for
+      Name       = "${var.name_prefix}-kms-key"
+      Purpose    = "EKS-Encryption"
+      product_id = var.product_id
+      used_for   = var.used_for
     }
   )
 }
 
 # Create KMS Key Alias for easier reference
 resource "aws_kms_alias" "eks" {
-  name          = "alias/${var.kms_alias_name}"
+  name          = "alias/${var.name_prefix}-eks-encryption"
   target_key_id = aws_kms_key.eks.key_id
 }
 
