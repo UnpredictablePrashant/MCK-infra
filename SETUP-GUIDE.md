@@ -8,7 +8,7 @@ This repository contains Terraform modules for deploying EKS infrastructure on A
 
 ## Prerequisites
 
-- AWS Account (Account ID: `669643925277`)
+- AWS Account (Account ID: `0123456789012`)
 - Terraform Cloud account with access to organization: `OFT-MCS-AWS-PLATFORMS`
 - IAM permissions to create roles and OIDC providers
 - GitHub repository access: `McK-Internal/McK-Infra-Srelearn02-labs`
@@ -51,7 +51,7 @@ After creating the role, update the trust relationship to include both GitHub Ac
         {
             "Effect": "Allow",
             "Principal": {
-                "Federated": "arn:aws:iam::669643925277:oidc-provider/token.actions.githubusercontent.com"
+                "Federated": "arn:aws:iam::0123456789012:oidc-provider/token.actions.githubusercontent.com"
             },
             "Action": "sts:AssumeRoleWithWebIdentity",
             "Condition": {
@@ -71,7 +71,7 @@ After creating the role, update the trust relationship to include both GitHub Ac
             "Sid": "tfe",
             "Effect": "Allow",
             "Principal": {
-                "Federated": "arn:aws:iam::669643925277:oidc-provider/terraform.mckinsey.cloud"
+                "Federated": "arn:aws:iam::0123456789012:oidc-provider/terraform.mckinsey.cloud"
             },
             "Action": "sts:AssumeRoleWithWebIdentity",
             "Condition": {
@@ -106,7 +106,7 @@ Add the following **environment variables** to enable OIDC authentication:
 | Key                      | Value                                                | Category | Description                                    |
 |--------------------------|------------------------------------------------------|----------|------------------------------------------------|
 | `TFC_AWS_PROVIDER_AUTH`  | `true`                                               | env      | Enables AWS provider authentication via OIDC  |
-| `TFC_AWS_RUN_ROLE_ARN`   | `arn:aws:iam::669643925277:role/Infra-lab-EKS`      | env      | IAM role ARN for Terraform Cloud to assume    |
+| `TFC_AWS_RUN_ROLE_ARN`   | `arn:aws:iam::0123456789012:role/Infra-lab-EKS`      | env      | IAM role ARN for Terraform Cloud to assume    |
 
 **Steps to add variables:**
 
@@ -178,7 +178,7 @@ Below is an example of how to call all modules in your working directory's `main
 
 locals {
   name_prefix = "mck-dev-lab1"
-  product_id  = "19497"
+  product_id  = "00000"
   used_for    = "non-prod"
 
   common_tags = {
@@ -289,7 +289,7 @@ module "eks" {
   create_standard_access_entries = true
 
   access_entries = {
-    "arn:aws:iam::669643925277:role/admin" = {
+    "arn:aws:iam::0123456789012:role/admin" = {
       kubernetes_groups = []
       type              = "STANDARD"
     }
@@ -297,7 +297,7 @@ module "eks" {
 
   access_entry_policy_associations = {
     "admin-cluster-admin" = {
-      principal_arn = "arn:aws:iam::669643925277:role/admin"
+      principal_arn = "arn:aws:iam::0123456789012:role/admin"
       policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
       access_scope = {
         type = "cluster"
@@ -512,8 +512,8 @@ aws sts get-caller-identity
 # Expected output shows your account ID and IAM principal
 # {
 #     "UserId": "AIDAXXXXXXXXXXXXXXXXX",
-#     "Account": "669643925277",
-#     "Arn": "arn:aws:iam::669643925277:role/admin"
+#     "Account": "0123456789012",
+#     "Arn": "arn:aws:iam::0123456789012:role/admin"
 # }
 ```
 
@@ -571,7 +571,7 @@ aws eks list-access-entries --cluster-name <your-name-prefix>-eks --region us-ea
 # Describe your specific access entry
 aws eks describe-access-entry \
   --cluster-name <your-name-prefix>-eks \
-  --principal-arn arn:aws:iam::669643925277:role/admin \
+  --principal-arn arn:aws:iam::0123456789012:role/admin \
   --region us-east-1
 ```
 
@@ -689,7 +689,7 @@ kubectl delete service hello-service
 3. If your role is missing, add it to the `access_entries` in your `main.tf`:
    ```hcl
    access_entries = {
-     "arn:aws:iam::669643925277:role/your-role" = {
+     "arn:aws:iam::0123456789012:role/your-role" = {
        kubernetes_groups = []
        type              = "STANDARD"
      }

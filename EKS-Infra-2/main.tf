@@ -4,7 +4,7 @@
 
 locals {
   name_prefix = "mck-dev-lab2"
-  product_id  = "19497"
+  product_id  = "00000"
   used_for    = "non-prod"
 
   common_tags = {
@@ -133,14 +133,14 @@ module "eks" {
   # - Node role access is automatically configured when using create_standard_access_entries = true
   access_entries = {
     # Admin role with full cluster access
-    "arn:aws:iam::669643925277:role/admin" = {
+    "arn:aws:iam::0123456789012:role/admin" = {
       kubernetes_groups = []
       type              = "STANDARD"
     }
 
     # Additional custom roles can be added here
     # Example:
-    # "arn:aws:iam::669643925277:role/developer" = {
+    # "arn:aws:iam::0123456789012:role/developer" = {
     #   kubernetes_groups = []
     #   type              = "STANDARD"
     # }
@@ -154,7 +154,7 @@ module "eks" {
   access_entry_policy_associations = {
     # Admin role - Full cluster admin access
     "admin-cluster-admin" = {
-      principal_arn = "arn:aws:iam::669643925277:role/admin"
+      principal_arn = "arn:aws:iam::0123456789012:role/admin"
       policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
       access_scope = {
         type = "cluster"
@@ -162,7 +162,7 @@ module "eks" {
     }
 
     "admin-admin-policy" = {
-      principal_arn = "arn:aws:iam::669643925277:role/admin"
+      principal_arn = "arn:aws:iam::0123456789012:role/admin"
       policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSAdminPolicy"
       access_scope = {
         type = "cluster"
@@ -170,7 +170,7 @@ module "eks" {
     }
 
     "admin-admin-view-policy" = {
-      principal_arn = "arn:aws:iam::669643925277:role/admin"
+      principal_arn = "arn:aws:iam::0123456789012:role/admin"
       policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSAdminViewPolicy"
       access_scope = {
         type = "cluster"

@@ -67,7 +67,7 @@ variable "cluster_role_arn" {
       var.cluster_role_arn == ""
       || can(regex("^arn:aws[a-z-]*:iam::[0-9]{12}:role/.+", var.cluster_role_arn))
     )
-    error_message = "The cluster_role_arn must be a valid IAM role ARN (e.g., arn:aws:iam::123456789012:role/role-name) or empty string."
+    error_message = "The cluster_role_arn must be a valid IAM role ARN (e.g., arn:aws:iam::0123456789012:role/role-name) or empty string."
   }
 }
 
@@ -81,7 +81,7 @@ variable "node_role_arn" {
       var.node_role_arn == ""
       || can(regex("^arn:aws[a-z-]*:iam::[0-9]{12}:role/.+", var.node_role_arn))
     )
-    error_message = "The node_role_arn must be a valid IAM role ARN (e.g., arn:aws:iam::123456789012:role/role-name) or empty string."
+    error_message = "The node_role_arn must be a valid IAM role ARN (e.g., arn:aws:iam::0123456789012:role/role-name) or empty string."
   }
 }
 
@@ -290,11 +290,11 @@ variable "access_entries" {
     
     Example:
     {
-      "arn:aws:iam::123456789012:role/DevRole" = {
+      "arn:aws:iam::0123456789012:role/DevRole" = {
         kubernetes_groups = ["developers"]
         type             = "STANDARD"  # STANDARD, FARGATE_LINUX, or EC2_LINUX
       }
-      "arn:aws:iam::123456789012:role/AdminRole" = {
+      "arn:aws:iam::0123456789012:role/AdminRole" = {
         kubernetes_groups = []
         type             = "STANDARD"
       }
@@ -321,14 +321,14 @@ variable "access_entry_policy_associations" {
     Example:
     {
       "admin-role-cluster-admin" = {
-        principal_arn = "arn:aws:iam::123456789012:role/AdminRole"
+        principal_arn = "arn:aws:iam::0123456789012:role/AdminRole"
         policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
         access_scope = {
           type = "cluster"  # cluster or namespace
         }
       }
       "dev-role-namespace-edit" = {
-        principal_arn = "arn:aws:iam::123456789012:role/DevRole"
+        principal_arn = "arn:aws:iam::0123456789012:role/DevRole"
         policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSEditPolicy"
         access_scope = {
           type       = "namespace"
